@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useI18n, LANGUAGES } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
@@ -384,9 +384,13 @@ function Switch({ checked = false, onChange }: { checked?: boolean; onChange?: (
   );
 }
 
-function SupportLink({ label, sub, icon }: { label: string; sub: string; icon: string }) {
-  return (
-    <button className="flex w-full items-center justify-between gap-3 border-b border-border py-3 text-left last:border-0 transition hover:text-neon">
+const SupportLink = React.forwardRef<HTMLButtonElement, { label: string; sub: string; icon: string }>(
+  ({ label, sub, icon }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      className="flex w-full items-center justify-between gap-3 border-b border-border py-3 text-left last:border-0 transition hover:text-neon"
+    >
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background font-mono text-sm text-neon">
           {icon}
@@ -400,5 +404,6 @@ function SupportLink({ label, sub, icon }: { label: string; sub: string; icon: s
         <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
       </svg>
     </button>
-  );
-}
+  )
+);
+SupportLink.displayName = "SupportLink";
