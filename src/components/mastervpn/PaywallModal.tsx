@@ -96,14 +96,17 @@ export function PaywallModal() {
           <div className="mt-5 grid grid-cols-2 gap-2">
             <PriceCard
               label={t("pay.monthly", "Monthly")}
-              price="$4.99"
+              price="$0.99"
               sub={t("pay.perMonth", "/ month")}
+              compare={t("pay.compareMonth", "Cheaper than a cup of coffee")}
             />
             <PriceCard
               label={t("pay.yearly", "Yearly")}
-              price="$39.99"
-              sub={t("pay.perYear", "/ year · -33%")}
+              price="$10.00"
+              sub={t("pay.perYear", "/ year · Best Value")}
+              compare={t("pay.compareYear", "Less than a single movie ticket")}
               highlight
+              badge={t("pay.bestValue", "BEST VALUE")}
             />
           </div>
 
