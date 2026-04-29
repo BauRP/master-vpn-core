@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-export function TrivoLogo({ className = "" }: { className?: string }) {
+export function MasterVpnLogo({ className = "" }: { className?: string }) {
   return (
     <Link to="/" className={`flex items-center gap-2 ${className}`}>
       <div className="relative flex h-8 w-8 items-center justify-center rounded-md border border-neon/40 bg-neon/10 glow-neon">

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 
-const STORAGE_KEY = "trivo.split.excluded";
+const STORAGE_KEY = "mastervpn.split.excluded";
 
 type AppEntry = {
   pkg: string;

@@ -10,7 +10,7 @@ type PremiumState = {
 };
 
 const Ctx = createContext<PremiumState | null>(null);
-const KEY = "trivo.premium";
+const KEY = "mastervpn.premium";
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false);

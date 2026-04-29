@@ -45,10 +45,10 @@ const COOLDOWN_MS = 800;
 const BACKOFF_BASE_MS = 600;
 const BACKOFF_MAX_MS = 8000;
 const DNS_SERVERS = ["1.1.1.1", "1.0.0.1"]; // Cloudflare — bypasses ISP DNS
-const KS_KEY = "trivo.killswitch";
-const AP_KEY = "trivo.autoprotect";
-const PROTO_KEY = "trivo.protocol";
-const STEALTH_KEY = "trivo.stealthmode";
+const KS_KEY = "mastervpn.killswitch";
+const AP_KEY = "mastervpn.autoprotect";
+const PROTO_KEY = "mastervpn.protocol";
+const STEALTH_KEY = "mastervpn.stealthmode";
 
 /**
  * Global VPN connection provider.

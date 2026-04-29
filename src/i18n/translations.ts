@@ -1,4 +1,4 @@
-// Trivo VPN Elite — i18n dictionaries
+// Master VPN — i18n dictionaries
 // 15 languages with full UI coverage
 
 export type LangCode =
@@ -193,7 +193,7 @@ const en: TranslationKeys = {
   "prof.auditDesc": "Wipe all cached data and rotate your anonymous ID. This action is instant and irreversible.",
   "prof.wipe": "Wipe App Data",
   "prof.wiping": "Wiping…",
-  "prof.chat": "Trivo Chat Elite",
+  "prof.chat": "Master VPN Support",
   "prof.chatSub": "Encrypted P2P support",
   "prof.github": "GitHub Repository",
   "prof.githubSub": "Open-source audit trail",
@@ -275,7 +275,7 @@ const ru: TranslationKeys = {
   "prof.auditDesc": "Удалить все кэшированные данные и сменить анонимный ID. Действие мгновенное и необратимое.",
   "prof.wipe": "Очистить данные",
   "prof.wiping": "Очистка…",
-  "prof.chat": "Trivo Chat Elite",
+  "prof.chat": "Master VPN Support",
   "prof.chatSub": "Зашифрованная P2P-поддержка",
   "prof.github": "Репозиторий GitHub",
   "prof.githubSub": "Открытый аудит-код",
@@ -339,7 +339,7 @@ const kk: TranslationKeys = {
   "prof.auditDesc": "Барлық кэшті өшіріп, анонимді ID-ді жаңартыңыз. Әрекет лезде орындалады және қайтарылмайды.",
   "prof.wipe": "Деректерді өшіру",
   "prof.wiping": "Өшірілуде…",
-  "prof.chat": "Trivo Chat Elite",
+  "prof.chat": "Master VPN Support",
   "prof.chatSub": "Шифрланған P2P қолдау",
   "prof.github": "GitHub репозиторийі",
   "prof.githubSub": "Ашық аудит-код",
@@ -403,7 +403,7 @@ const zh: TranslationKeys = {
   "prof.auditDesc": "清除所有缓存数据并轮换您的匿名 ID。此操作即时且不可逆。",
   "prof.wipe": "清除应用数据",
   "prof.wiping": "清除中…",
-  "prof.chat": "Trivo Chat Elite",
+  "prof.chat": "Master VPN Support",
   "prof.chatSub": "加密 P2P 支持",
   "prof.github": "GitHub 仓库",
   "prof.githubSub": "开源审计记录",
@@ -467,7 +467,7 @@ const ja: TranslationKeys = {
   "prof.auditDesc": "全キャッシュを消去し匿名 ID を更新します。即時かつ不可逆です。",
   "prof.wipe": "アプリデータを消去",
   "prof.wiping": "消去中…",
-  "prof.chat": "Trivo Chat Elite",
+  "prof.chat": "Master VPN Support",
   "prof.chatSub": "暗号化 P2P サポート",
   "prof.github": "GitHub リポジトリ",
   "prof.githubSub": "オープンソース監査",

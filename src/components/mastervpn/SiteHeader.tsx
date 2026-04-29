@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { TrivoLogo } from "./Logo";
+import { MasterVpnLogo } from "./Logo";
 
 export function SiteHeader() {
   const navItems = [
@@ -11,7 +11,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <TrivoLogo />
+        <MasterVpnLogo />
         <nav className="hidden items-center gap-8 md:flex">
           {navItems.map((item) => (
             <Link
