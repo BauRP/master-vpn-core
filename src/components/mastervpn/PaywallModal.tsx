@@ -74,6 +74,9 @@ export function PaywallModal() {
             <h2 className="mt-1 font-display text-2xl font-bold text-foreground text-glow">
               {t("pay.title", "Unlock Elite Protection")}
             </h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("pay.valueProp", "Just $10 a year for full access — 12 months of Elite Protection.")}
+            </p>
             {paywallReason && (
               <p className="mt-1 text-xs text-muted-foreground">{paywallReason}</p>
             )}
