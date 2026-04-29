@@ -1,11 +1,11 @@
-import { Link } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { MasterVpnLogo } from "./Logo";
 
 export function SiteHeader() {
   const navItems = [
-    { to: "/" as const, label: "Home" },
-    { to: "/features" as const, label: "Features" },
-    { to: "/app" as const, label: "Live Demo" },
+    { to: "/", label: "Home", end: true },
+    { to: "/features", label: "Features", end: false },
+    { to: "/app", label: "Live Demo", end: false },
   ];
 
   return (
@@ -14,16 +14,16 @@ export function SiteHeader() {
         <MasterVpnLogo />
         <nav className="hidden items-center gap-8 md:flex">
           {navItems.map((item) => (
-            <Link
+            <NavLink
               key={item.to}
               to={item.to}
-              activeOptions={{ exact: true }}
-              activeProps={{ className: "text-neon" }}
-              inactiveProps={{ className: "text-muted-foreground hover:text-foreground" }}
-              className="text-sm font-medium transition-colors"
+              end={item.end}
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors ${isActive ? "text-neon" : "text-muted-foreground hover:text-foreground"}`
+              }
             >
               {item.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
         <Link
