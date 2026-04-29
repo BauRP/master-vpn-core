@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useI18n, LANGUAGES } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
