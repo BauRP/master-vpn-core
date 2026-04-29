@@ -4,14 +4,14 @@ import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium } from "@/components/mastervpn/PremiumContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 
-export default function generateId() {
+function generateId() {
   const chars = "0123456789ABCDEF";
   let id = "";
   for (let i = 0; i < 16; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return id.match(/.{1,4}/g)!.join("-");
 }
 
-function Profile() {
+export default function Profile() {
   const { t } = useI18n();
   const { pqc } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
