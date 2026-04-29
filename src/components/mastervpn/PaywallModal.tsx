@@ -134,16 +134,40 @@ export function PaywallModal() {
   );
 }
 
-function PriceCard({ label, price, sub, highlight }: { label: string; price: string; sub: string; highlight?: boolean }) {
+function PriceCard({
+  label,
+  price,
+  sub,
+  compare,
+  highlight,
+  badge,
+}: {
+  label: string;
+  price: string;
+  sub: string;
+  compare?: string;
+  highlight?: boolean;
+  badge?: string;
+}) {
   return (
     <div
-      className={`rounded-xl border p-3 text-center transition ${
+      className={`relative rounded-xl border p-3 text-center transition ${
         highlight ? "border-neon bg-neon/10 glow-neon" : "border-border bg-background"
       }`}
     >
+      {badge && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full border border-neon bg-background px-2 py-0.5 font-mono text-[8px] font-bold tracking-widest text-neon">
+          {badge}
+        </span>
+      )}
       <p className="font-mono text-[10px] tracking-widest text-muted-foreground">{label}</p>
       <p className={`mt-1 font-display text-lg font-bold ${highlight ? "text-neon" : "text-foreground"}`}>{price}</p>
       <p className="mt-0.5 font-mono text-[9px] text-muted-foreground">{sub}</p>
+      {compare && (
+        <p className={`mt-1.5 font-mono text-[9px] italic ${highlight ? "text-neon/80" : "text-muted-foreground/80"}`}>
+          {compare}
+        </p>
+      )}
     </div>
   );
 }
