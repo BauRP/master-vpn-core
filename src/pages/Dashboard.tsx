@@ -1,16 +1,24 @@
+import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
 import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
+import { ServerSheet } from "@/components/mastervpn/ServerSheet";
+import { useServers } from "@/lib/servers/useServers";
 
 export default function Dashboard() {
   const { t } = useI18n();
   const { stealth, pqc, leakDetected, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
-  // Connection state lives in the global VpnProvider so it survives tab
-  // navigation. The Home screen is just a remote control for the service.
-  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle } = useVpn();
+  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId } = useVpn();
+  const { data: serverData } = useServers();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const selectedServer = useMemo(() => {
+    const list = serverData?.servers ?? [];
+    return list.find((s) => s.id === selectedServerId) ?? list[0] ?? null;
+  }, [serverData, selectedServerId]);
   const eliteActive = connected && isPremium && stealthMode === "elite";
   const realityActive = eliteActive && protocol === "vless-reality";
 
