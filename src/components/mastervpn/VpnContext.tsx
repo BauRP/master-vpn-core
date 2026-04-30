@@ -33,6 +33,9 @@ type VpnState = {
   /** Standard vs Elite Stealth (Anti-DPI) Mode. Premium-gated. Persisted. */
   stealthMode: StealthMode;
   setStealthMode: (m: StealthMode) => void;
+  /** ID of the server selected from the catalog (servers table). Persisted. */
+  selectedServerId: string | null;
+  setSelectedServerId: (id: string | null) => void;
   connect: () => void;
   disconnect: () => void;
   toggle: () => void;
@@ -49,6 +52,7 @@ const KS_KEY = "mastervpn.killswitch";
 const AP_KEY = "mastervpn.autoprotect";
 const PROTO_KEY = "mastervpn.protocol";
 const STEALTH_KEY = "mastervpn.stealthmode";
+const SERVER_KEY = "mastervpn.selectedServer";
 
 /**
  * Global VPN connection provider.
@@ -79,6 +83,7 @@ export function VpnProvider({ children }: { children: ReactNode }) {
   const [networkTrust, setNetworkTrust] = useState<NetworkTrust>("trusted");
   const [protocol, setProtocolState] = useState<VpnProtocol>("wireguard");
   const [stealthMode, setStealthModeState] = useState<StealthMode>("standard");
+  const [selectedServerId, setSelectedServerIdState] = useState<string | null>(null);
 
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handshake = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,6 +122,8 @@ export function VpnProvider({ children }: { children: ReactNode }) {
         setStealthModeState(sm);
         vpnEngine.setStealthMode(sm);
       }
+      const srv = window.localStorage.getItem(SERVER_KEY);
+      if (srv) setSelectedServerIdState(srv);
     } catch {}
     vpnEngine.setDnsServers(DNS_SERVERS);
   }, []);
@@ -144,6 +151,14 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     try { window.localStorage.setItem(KS_KEY, v ? "1" : "0"); } catch {}
     vpnEngine.setKillSwitch(v);
     if (!v) setKillSwitchTriggered(false);
+  }, []);
+
+  const setSelectedServerId = useCallback((id: string | null) => {
+    setSelectedServerIdState(id);
+    try {
+      if (id) window.localStorage.setItem(SERVER_KEY, id);
+      else window.localStorage.removeItem(SERVER_KEY);
+    } catch {}
   }, []);
 
   const setAutoProtect = useCallback((v: boolean) => {
@@ -339,6 +354,8 @@ export function VpnProvider({ children }: { children: ReactNode }) {
         setProtocol,
         stealthMode,
         setStealthMode,
+        selectedServerId,
+        setSelectedServerId,
         connect,
         disconnect,
         toggle,
