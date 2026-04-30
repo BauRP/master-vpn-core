@@ -1,16 +1,24 @@
+import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
 import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
+import { ServerSheet } from "@/components/mastervpn/ServerSheet";
+import { useServers } from "@/lib/servers/useServers";
 
 export default function Dashboard() {
   const { t } = useI18n();
   const { stealth, pqc, leakDetected, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
-  // Connection state lives in the global VpnProvider so it survives tab
-  // navigation. The Home screen is just a remote control for the service.
-  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle } = useVpn();
+  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId } = useVpn();
+  const { data: serverData } = useServers();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const selectedServer = useMemo(() => {
+    const list = serverData?.servers ?? [];
+    return list.find((s) => s.id === selectedServerId) ?? list[0] ?? null;
+  }, [serverData, selectedServerId]);
   const eliteActive = connected && isPremium && stealthMode === "elite";
   const realityActive = eliteActive && protocol === "vless-reality";
 
@@ -22,7 +30,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="relative px-5 py-6">
+    <div className="relative px-5 pt-5 pb-2">
       <div className="text-center">
         <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground">{t("dash.identity")}</p>
         <p className={`mt-1 font-display text-2xl font-bold tracking-tight ${connected ? "text-neon text-glow" : "text-foreground"}`}>
@@ -30,7 +38,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="mt-10 flex justify-center">
+      <div className="mt-6 flex justify-center">
         <button
           disabled={cooldown || connecting}
           onClick={() => {
@@ -42,7 +50,7 @@ export default function Dashboard() {
             // Premium-only layers (PQC, Elite servers) are gated separately in Settings.
             toggle();
           }}
-          className={`relative flex h-56 w-56 flex-col items-center justify-center rounded-full border-2 transition-all duration-500 ${
+          className={`relative flex h-48 w-48 flex-col items-center justify-center rounded-full border-2 transition-all duration-500 ${
             cooldown || connecting ? "cursor-not-allowed opacity-80" : ""
           } ${
             connected ? "border-success bg-success/10" : "border-neon bg-neon/5 animate-pulse-ring"
@@ -75,7 +83,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <Card label={t("dash.stealthTunnel")} value={connected ? t("dash.active") : t("dash.standby")} dot={connected ? "success" : "warn"} />
         <Card label={t("dash.virtualIp")} value={connected ? "185.•••.•••.42" : "—"} />
       </div>
@@ -170,22 +178,45 @@ export default function Dashboard() {
 
       <div className="mt-3 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] tracking-widest text-muted-foreground">{t("dash.smartServer")}</p>
-            <p className="mt-1 font-display text-base font-semibold">Frankfurt · DE</p>
-            <p className="mt-1 font-mono text-[10px] text-muted-foreground">Google Cloud · VLESS/WS:443</p>
+            {selectedServer ? (
+              <>
+                <p className="mt-1 truncate font-display text-base font-semibold">
+                  <span className="mr-1.5">{selectedServer.flag ?? "🌐"}</span>
+                  {selectedServer.country_name ?? selectedServer.country_code ?? "—"}
+                  {selectedServer.city ? ` · ${selectedServer.city}` : ""}
+                </p>
+                <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                  {selectedServer.source} · {selectedServer.protocol === "vless" ? "VLESS / Reality" : "Shadowsocks"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 font-display text-base font-semibold text-muted-foreground">
+                  {t("dash.noServer", "Нет выбранного сервера")}
+                </p>
+                <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                  {t("dash.tapChange", "Нажмите «Сменить» чтобы выбрать узел")}
+                </p>
+              </>
+            )}
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-1.5 text-success">
-              <span className="h-2 w-2 animate-glow rounded-full bg-success" />
-              <span className="font-mono text-xs">38ms</span>
-            </div>
+          <div className="ml-3 shrink-0 text-right">
+            {selectedServer?.latency_ms != null && (
+              <div className="flex items-center justify-end gap-1.5 text-success">
+                <span className="h-2 w-2 animate-glow rounded-full bg-success" />
+                <span className="font-mono text-xs">{selectedServer.latency_ms}ms</span>
+              </div>
+            )}
             <button
+              type="button"
               onClick={() => {
                 haptic(10);
-                if (!isPremium) {
-                  openPaywall(t("pay.reasonServer", "Premium unlocks all Elite servers worldwide."));
+                if (!isPremium && selectedServer && selectedServer.source !== "rescue") {
+                  // Free tier: allow browsing but the eventual connect is gated elsewhere.
                 }
+                setSheetOpen(true);
               }}
               className="mt-2 inline-flex items-center gap-1 rounded border border-border px-2 py-1 font-mono text-[10px] text-muted-foreground hover:border-neon hover:text-neon"
             >
@@ -195,6 +226,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <ServerSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }

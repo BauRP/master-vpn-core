@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      servers: {
+        Row: {
+          city: string | null
+          config: string
+          country_code: string | null
+          country_name: string | null
+          created_at: string
+          flag: string | null
+          host: string
+          id: string
+          is_alive: boolean
+          last_seen: string
+          last_validated_at: string | null
+          latency_ms: number | null
+          port: number
+          protocol: string
+          source: string
+        }
+        Insert: {
+          city?: string | null
+          config: string
+          country_code?: string | null
+          country_name?: string | null
+          created_at?: string
+          flag?: string | null
+          host: string
+          id?: string
+          is_alive?: boolean
+          last_seen?: string
+          last_validated_at?: string | null
+          latency_ms?: number | null
+          port: number
+          protocol: string
+          source: string
+        }
+        Update: {
+          city?: string | null
+          config?: string
+          country_code?: string | null
+          country_name?: string | null
+          created_at?: string
+          flag?: string | null
+          host?: string
+          id?: string
+          is_alive?: boolean
+          last_seen?: string
+          last_validated_at?: string | null
+          latency_ms?: number | null
+          port?: number
+          protocol?: string
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
