@@ -94,7 +94,7 @@ export default function AppShell() {
           </div>
         )}
 
-        <main className="no-scrollbar flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: "100px" }}>
+        <main className="no-scrollbar flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: "76px" }}>
           <Outlet />
         </main>
 
