@@ -242,33 +242,36 @@ export default function Settings() {
             {networkTrust.toUpperCase()}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {(["trusted", "untrusted", "offline"] as const).map((tr) => (
+        <div className="mt-2 flex flex-col gap-2">
+          {(
+            [
+              { id: "trusted", label: "SIM TRUSTED", desc: t("set.simTrustedDesc", "Безопасная сеть") },
+              { id: "untrusted", label: "SIM UNTRUSTED", desc: t("set.simUntrustedDesc", "Незнакомая сеть") },
+              { id: "offline", label: "SIM OFFLINE", desc: t("set.simOfflineDesc", "Режим без интернета") },
+            ] as const
+          ).map((s) => (
             <button
-              key={tr}
+              key={s.id}
               onClick={() => {
                 haptic(8);
-                vpnEngine.simulateNetworkChange(tr);
+                vpnEngine.simulateNetworkChange(s.id);
               }}
-              className="rounded-md border border-dashed border-border bg-background/50 py-1.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground transition hover:border-neon/40 hover:text-neon"
+              className={`flex w-full items-center justify-between rounded-md border border-dashed border-border bg-background/50 px-3 py-2 text-left transition hover:border-neon/40 ${
+                networkTrust === s.id ? "border-neon/60 text-neon" : "text-muted-foreground"
+              }`}
             >
-              // SIM {tr}
+              <div className="flex flex-col">
+                <span className="font-mono text-[10px] uppercase tracking-widest">// {s.label}</span>
+                <span className="ml-3 mt-0.5 font-mono text-[10px] normal-case text-neon/80">{s.desc}</span>
+              </div>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  networkTrust === s.id ? "animate-glow bg-neon" : "bg-border"
+                }`}
+              />
             </button>
           ))}
         </div>
-      </Section>
-
-      <Section title={t("set.support", "ПОДДЕРЖКА И РАЗРАБОТКА")}>
-        <SupportLink
-          label={t("prof.chat")}
-          sub={t("prof.chatSub")}
-          icon="💬"
-        />
-        <SupportLink
-          label={t("prof.github")}
-          sub={t("prof.githubSub")}
-          icon="</>"
-        />
       </Section>
 
       <p className="mt-8 text-center font-mono text-[10px] text-muted-foreground">{t("set.build")}</p>
