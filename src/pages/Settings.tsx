@@ -26,10 +26,28 @@ export default function Settings() {
   const [encryptedDns, setEncryptedDns] = useState(true);
   const [langOpen, setLangOpen] = useState(false);
 
-  const protocolOptions: { id: typeof protocol; label: string; sub: string; premium: boolean }[] = [
-    { id: "vless-reality", label: "VLESS · Reality", sub: "XTLS-Reality · mimics HTTPS", premium: true },
-    { id: "shadowsocks", label: "Shadowsocks", sub: "v2ray-plugin · random noise", premium: true },
-    { id: "wireguard", label: "WireGuard", sub: "Standard · high performance", premium: false },
+  const protocolOptions: { id: typeof protocol; label: string; sub: string; desc: string; premium: boolean }[] = [
+    {
+      id: "vless-reality",
+      label: "VLESS · Reality",
+      sub: "XTLS-Reality · mimics HTTPS",
+      desc: t("set.protoVlessDesc", "Самый быстрый и современный. Минимум нагрузки на батарею."),
+      premium: true,
+    },
+    {
+      id: "shadowsocks",
+      label: "Shadowsocks",
+      sub: "v2ray-plugin · random noise",
+      desc: t("set.protoSsDesc", "Ультимативное решение против самых жёстких блокировок."),
+      premium: true,
+    },
+    {
+      id: "wireguard",
+      label: "WireGuard",
+      sub: "Standard · high performance",
+      desc: t("set.protoWgDesc", "Стандартный протокол. Высокая скорость, базовая защита."),
+      premium: false,
+    },
   ];
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
