@@ -171,14 +171,14 @@ export default function Dashboard() {
         </span>
       </div>
 
-      <div className="mt-3 rounded-xl border border-border bg-card px-4 py-2.5">
-        <div className="mb-2 flex items-center justify-between">
+      <div className="mt-3 rounded-xl border border-border bg-card px-4 pt-2.5 pb-2">
+        <div className="mb-1.5 flex items-center justify-between">
           <span className="font-mono text-[10px] tracking-widest text-muted-foreground">{t("dash.throughput")}</span>
           <span className="font-mono text-[10px] text-neon">MB/s</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Sparkline label={t("dash.down")} value={down.toFixed(1)} series={downSeries} color="var(--neon)" />
-          <Sparkline label={t("dash.up")} value={up.toFixed(1)} series={upSeries} color="var(--success)" />
+          <ThroughputRow label={t("dash.down")} value={down.toFixed(1)} color="var(--neon)" />
+          <ThroughputRow label={t("dash.up")} value={up.toFixed(1)} color="var(--success)" />
         </div>
       </div>
 
@@ -317,20 +317,11 @@ function StatusPill({ label, value, active }: { label: string; value: string; ac
   );
 }
 
-function Sparkline({ label, value, series, color }: { label: string; value: string; series: number[]; color: string }) {
-  const max = Math.max(...series, 100);
-  const w = 120;
-  const h = 36;
-  const pts = series.map((v, i) => `${(i / (series.length - 1)) * w},${h - (v / max) * h}`).join(" ");
+function ThroughputRow({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
-        <span className="font-mono text-sm font-semibold" style={{ color }}>{value}</span>
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="mt-1 w-full">
-        <polyline fill="none" stroke={color} strokeWidth="1.5" points={pts} />
-      </svg>
+    <div className="flex items-baseline justify-between">
+      <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
+      <span className="font-mono text-sm font-semibold" style={{ color }}>{value}</span>
     </div>
   );
 }
