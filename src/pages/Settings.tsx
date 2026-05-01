@@ -405,27 +405,3 @@ function Switch({ checked = false, onChange }: { checked?: boolean; onChange?: (
     </button>
   );
 }
-
-const SupportLink = React.forwardRef<HTMLButtonElement, { label: string; sub: string; icon: string }>(
-  ({ label, sub, icon }, ref) => (
-    <button
-      ref={ref}
-      type="button"
-      className="flex w-full items-center justify-between gap-3 border-b border-border py-3 text-left last:border-0 transition hover:text-neon"
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background font-mono text-sm text-neon">
-          {icon}
-        </div>
-        <div>
-          <p className="font-display text-sm font-semibold">{label}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{sub}</p>
-        </div>
-      </div>
-      <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted-foreground rtl:rotate-180" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
-      </svg>
-    </button>
-  )
-);
-SupportLink.displayName = "SupportLink";
