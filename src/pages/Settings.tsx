@@ -176,15 +176,16 @@ export default function Settings() {
                   active && !locked ? "border-neon bg-neon/5 glow-neon" : "border-border hover:border-neon/40"
                 } ${locked ? "opacity-70" : ""}`}
               >
-                <div>
+                <div className="min-w-0 flex-1 pr-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-display text-sm font-semibold">{p.label}</span>
+                    <span className="font-display text-base font-bold">{p.label}</span>
                     {locked && <CrownIcon className="h-3 w-3 text-warning" />}
                     <span className={`ml-1 font-mono text-[10px] ${active && !locked ? "text-neon" : "text-muted-foreground"}`}>
                       [{active && !locked ? t("set.protoActive") : t("set.protoReady")}]
                     </span>
                   </div>
                   <p className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{p.sub}</p>
+                  <p className="mt-1 text-[12px] leading-snug text-neon/80">{p.desc}</p>
                 </div>
                 <div className={`h-4 w-4 rounded-full border-2 ${active && !locked ? "border-neon bg-neon" : "border-border"}`} />
               </button>
