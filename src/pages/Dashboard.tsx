@@ -6,6 +6,7 @@ import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { ServerSheet } from "@/components/mastervpn/ServerSheet";
 import { useServers } from "@/lib/servers/useServers";
+import { DashboardBandwidthExtra, type DashboardAlert } from "@/components/mastervpn/DashboardBandwidthExtra";
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -176,6 +177,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <DashboardBandwidthExtra alerts={buildDashboardAlerts({ leakDetected, reconnecting, fallbackPort, connected, stealthMode, isPremium })} />
+
       <div className="mt-3 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
@@ -230,6 +233,31 @@ export default function Dashboard() {
       <ServerSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
+}
+
+/**
+ * Derive supplementary-row alerts from VPN/security state.
+ * Returns [] when there is nothing to surface — the container collapses to 0px.
+ */
+function buildDashboardAlerts(args: {
+  leakDetected: boolean;
+  reconnecting: boolean;
+  fallbackPort: number;
+  connected: boolean;
+  stealthMode: string;
+  isPremium: boolean;
+}): DashboardAlert[] {
+  const out: DashboardAlert[] = [];
+  if (args.leakDetected) {
+    out.push({ id: "leak", tone: "danger", label: "DNS LEAK DETECTED", value: "BLOCKED" });
+  }
+  if (args.reconnecting) {
+    out.push({ id: "reconnect", tone: "warn", label: "TUNNEL RECONNECTING", value: "HOLD" });
+  }
+  if (args.connected && args.isPremium && args.stealthMode === "elite") {
+    out.push({ id: "stealth", tone: "info", label: "ELITE OBFUSCATION", value: `:${args.fallbackPort}` });
+  }
+  return out;
 }
 
 function Card({ label, value, dot }: { label: string; value: string; dot?: "success" | "warn" }) {
