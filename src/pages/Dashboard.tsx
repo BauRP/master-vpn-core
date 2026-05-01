@@ -20,6 +20,11 @@ export default function Dashboard() {
     const list = serverData?.servers ?? [];
     return list.find((s) => s.id === selectedServerId) ?? list[0] ?? null;
   }, [serverData, selectedServerId]);
+  const dashboardAlerts = useMemo(
+    () => buildDashboardAlerts({ leakDetected, reconnecting, fallbackPort, connected, stealthMode, isPremium }),
+    [leakDetected, reconnecting, fallbackPort, connected, stealthMode, isPremium],
+  );
+  const hasActiveAlerts = dashboardAlerts.length > 0;
   const eliteActive = connected && isPremium && stealthMode === "elite";
   const realityActive = eliteActive && protocol === "vless-reality";
 
@@ -177,9 +182,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <DashboardBandwidthExtra alerts={buildDashboardAlerts({ leakDetected, reconnecting, fallbackPort, connected, stealthMode, isPremium })} />
+      <DashboardBandwidthExtra alerts={dashboardAlerts} />
 
-      <div className="mt-3 rounded-xl border border-border bg-card p-4">
+      <div className={`${hasActiveAlerts ? "mt-3" : "mt-0"} rounded-xl border border-border bg-card p-4`}>
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] tracking-widest text-muted-foreground">{t("dash.smartServer")}</p>
