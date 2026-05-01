@@ -171,14 +171,14 @@ export default function Dashboard() {
         </span>
       </div>
 
-      <div className="mt-3 rounded-xl border border-border bg-card px-4 py-2.5">
-        <div className="mb-2 flex items-center justify-between">
+      <div className="mt-3 rounded-xl border border-border bg-card px-4 pt-2.5 pb-2">
+        <div className="mb-1.5 flex items-center justify-between">
           <span className="font-mono text-[10px] tracking-widest text-muted-foreground">{t("dash.throughput")}</span>
           <span className="font-mono text-[10px] text-neon">MB/s</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Sparkline label={t("dash.down")} value={down.toFixed(1)} series={downSeries} color="var(--neon)" />
-          <Sparkline label={t("dash.up")} value={up.toFixed(1)} series={upSeries} color="var(--success)" />
+          <ThroughputRow label={t("dash.down")} value={down.toFixed(1)} color="var(--neon)" />
+          <ThroughputRow label={t("dash.up")} value={up.toFixed(1)} color="var(--success)" />
         </div>
       </div>
 
