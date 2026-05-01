@@ -6,6 +6,7 @@ import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { ServerSheet } from "@/components/mastervpn/ServerSheet";
 import { useServers } from "@/lib/servers/useServers";
+import { DashboardBandwidthExtra, type DashboardAlert } from "@/components/mastervpn/DashboardBandwidthExtra";
 
 export default function Dashboard() {
   const { t } = useI18n();
