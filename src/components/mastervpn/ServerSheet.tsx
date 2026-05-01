@@ -2,10 +2,11 @@
  * ServerSheet — bottom sheet for server selection.
  * Opens only when the user taps "Сменить" on the dashboard.
  *
- * - Renders the live catalog from `useServers()`.
+ * - Renders the live catalog from `useServers()` grouped by region.
  * - Shows pseudo-ping while open (HTTP-RTT to host:port via fetch + AbortController).
  *   Real ICMP/TCP ping requires a native Capacitor plugin — TODO post-export.
- * - Selecting a row updates the global selectedServer in VpnContext.
+ * - Selecting a row updates the global selectedServer in VpnContext and closes
+ *   the sheet instantly.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -15,6 +16,22 @@ import { useVpn } from "@/components/mastervpn/VpnContext";
 
 const PING_INTERVAL_MS = 3000;
 const PING_TIMEOUT_MS = 2500;
+
+// Region grouping by ISO country code — matches the global server catalog.
+const REGION_OF: Record<string, "europe" | "asia" | "america"> = {
+  DE: "europe", GB: "europe", FR: "europe", NL: "europe",
+  IT: "europe", ES: "europe", SE: "europe", CH: "europe",
+  KZ: "asia", JP: "asia", SG: "asia", HK: "asia", KR: "asia",
+  IN: "asia", TW: "asia", AE: "asia", TR: "asia",
+  US: "america", CA: "america", BR: "america", MX: "america", AR: "america",
+};
+
+const REGION_ORDER: Array<"europe" | "asia" | "america" | "other"> = [
+  "europe",
+  "asia",
+  "america",
+  "other",
+];
 
 async function probeRtt(host: string, port: number): Promise<number | null> {
   // Browser-only approximation: HTTPS HEAD with timeout.
@@ -74,23 +91,61 @@ export function ServerSheet({
     };
   }, [open, data]);
 
-  const servers = useMemo(() => data?.servers ?? [], [data]);
+  const grouped = useMemo(() => {
+    const groups: Record<"europe" | "asia" | "america" | "other", ServerRow[]> = {
+      europe: [], asia: [], america: [], other: [],
+    };
+    for (const s of data?.servers ?? []) {
+      const r = (s.country_code && REGION_OF[s.country_code]) || "other";
+      groups[r].push(s);
+    }
+    // Sort each region by latency asc (nulls last).
+    for (const k of Object.keys(groups) as Array<keyof typeof groups>) {
+      groups[k].sort((a, b) => {
+        const av = a.latency_ms ?? 9999;
+        const bv = b.latency_ms ?? 9999;
+        return av - bv;
+      });
+    }
+    return groups;
+  }, [data]);
+
+  const regionLabels = {
+    europe: t("srv.regionEurope", "ЕВРОПА"),
+    asia: t("srv.regionAsia", "АЗИЯ"),
+    america: t("srv.regionAmerica", "АМЕРИКА"),
+    other: t("srv.regionOther", "ДРУГИЕ"),
+  };
+
+  const totalCount = data?.servers?.length ?? 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="mx-auto h-[80dvh] max-w-[480px] rounded-t-2xl border-t border-border bg-background p-0"
+        className="mx-auto h-[85dvh] max-w-[480px] rounded-t-2xl border-t border-neon/30 bg-background p-0"
       >
-        <SheetHeader className="border-b border-border px-5 py-4 text-left">
+        <SheetHeader className="relative border-b border-border px-5 py-4 text-left">
           <SheetTitle className="font-display text-base font-bold">
-            {t("srv.pickTitle", "Выбор сервера")}
+            {t("srv.pickTitle", "Выберите сервер")}
           </SheetTitle>
           <p className="font-mono text-[10px] tracking-widest text-muted-foreground">
             {data?.source === "rescue"
-              ? t("srv.rescue", "АВАРИЙНЫЙ СПИСОК · СКАНИРОВАНИЕ ИДЁТ")
-              : t("srv.live", "ЖИВЫЕ УЗЛЫ · ПИНГ ОБНОВЛЯЕТСЯ КАЖДЫЕ 3С")}
+              ? t("srv.rescue", "АВАРИЙНЫЙ СПИСОК · ПИНГ ОБНОВЛЯЕТСЯ")
+              : t("srv.live", "ЖИВЫЕ УЗЛЫ · ПИНГ КАЖДЫЕ 3С")}
+            {" · "}
+            <span className="text-neon">{totalCount}</span>
           </p>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            aria-label={t("srv.close", "Закрыть")}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-neon hover:text-neon"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M6 18 18 6" />
+            </svg>
+          </button>
         </SheetHeader>
 
         <div className="h-full overflow-y-auto pb-24">
@@ -104,26 +159,38 @@ export function ServerSheet({
               {t("srv.error", "ОШИБКА ЗАГРУЗКИ")}
             </div>
           )}
-          {!isLoading && servers.length === 0 && (
+          {!isLoading && totalCount === 0 && (
             <div className="px-5 py-8 text-center font-mono text-[11px] text-muted-foreground">
               {t("srv.empty", "СПИСОК ПУСТ — ЖДЁМ СКАНЕР")}
             </div>
           )}
 
-          <ul className="divide-y divide-border">
-            {servers.map((s) => (
-              <ServerRowItem
-                key={s.id}
-                server={s}
-                ping={livePings[s.id]}
-                selected={selectedServerId === s.id}
-                onSelect={() => {
-                  setSelectedServerId(s.id);
-                  onOpenChange(false);
-                }}
-              />
-            ))}
-          </ul>
+          {REGION_ORDER.map((region) => {
+            const rows = grouped[region];
+            if (!rows.length) return null;
+            return (
+              <section key={region}>
+                <h3 className="sticky top-0 z-10 bg-background/95 px-5 pb-1 pt-3 font-mono text-[10px] tracking-widest text-neon backdrop-blur">
+                  // {regionLabels[region]} · {rows.length}
+                </h3>
+                <ul className="divide-y divide-border">
+                  {rows.map((s) => (
+                    <ServerRowItem
+                      key={s.id}
+                      server={s}
+                      ping={livePings[s.id]}
+                      selected={selectedServerId === s.id}
+                      onSelect={() => {
+                        // Update target server in the VPN engine and close instantly.
+                        setSelectedServerId(s.id);
+                        onOpenChange(false);
+                      }}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </div>
       </SheetContent>
     </Sheet>
@@ -158,13 +225,18 @@ function ServerRowItem({
           selected ? "bg-neon/10" : ""
         }`}
       >
-        <span className="text-xl leading-none">{server.flag ?? "🌐"}</span>
+        <span className="text-2xl leading-none">{server.flag ?? "🌐"}</span>
         <div className="min-w-0 flex-1">
           <p className={`truncate font-display text-sm font-semibold ${selected ? "text-neon" : "text-foreground"}`}>
             {server.country_name ?? server.country_code ?? "—"}
+            {server.city && (
+              <span className="ml-1.5 font-mono text-[11px] font-normal text-muted-foreground">
+                · {server.city}
+              </span>
+            )}
           </p>
           <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
-            {(server.city || server.host)} · {server.source} · {server.protocol === "vless" ? "VLESS" : "SS"}
+            {server.protocol === "vless" ? "VLESS · Reality" : "Shadowsocks"} · {server.source}
           </p>
         </div>
         <div className="text-right">

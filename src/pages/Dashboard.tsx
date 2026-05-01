@@ -56,7 +56,7 @@ export default function Dashboard() {
             // Premium-only layers (PQC, Elite servers) are gated separately in Settings.
             toggle();
           }}
-          className={`relative flex h-48 w-48 flex-col items-center justify-center rounded-full border-2 transition-all duration-500 ${
+          className={`relative flex h-40 w-40 flex-col items-center justify-center rounded-full border-2 transition-all duration-500 ${
             cooldown || connecting ? "cursor-not-allowed opacity-80" : ""
           } ${
             connected ? "border-success bg-success/10" : "border-neon bg-neon/5 animate-pulse-ring"

@@ -26,10 +26,28 @@ export default function Settings() {
   const [encryptedDns, setEncryptedDns] = useState(true);
   const [langOpen, setLangOpen] = useState(false);
 
-  const protocolOptions: { id: typeof protocol; label: string; sub: string; premium: boolean }[] = [
-    { id: "vless-reality", label: "VLESS · Reality", sub: "XTLS-Reality · mimics HTTPS", premium: true },
-    { id: "shadowsocks", label: "Shadowsocks", sub: "v2ray-plugin · random noise", premium: true },
-    { id: "wireguard", label: "WireGuard", sub: "Standard · high performance", premium: false },
+  const protocolOptions: { id: typeof protocol; label: string; sub: string; desc: string; premium: boolean }[] = [
+    {
+      id: "vless-reality",
+      label: "VLESS · Reality",
+      sub: "XTLS-Reality · mimics HTTPS",
+      desc: t("set.protoVlessDesc", "Самый быстрый и современный. Минимум нагрузки на батарею."),
+      premium: true,
+    },
+    {
+      id: "shadowsocks",
+      label: "Shadowsocks",
+      sub: "v2ray-plugin · random noise",
+      desc: t("set.protoSsDesc", "Ультимативное решение против самых жёстких блокировок."),
+      premium: true,
+    },
+    {
+      id: "wireguard",
+      label: "WireGuard",
+      sub: "Standard · high performance",
+      desc: t("set.protoWgDesc", "Стандартный протокол. Высокая скорость, базовая защита."),
+      premium: false,
+    },
   ];
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
@@ -158,15 +176,16 @@ export default function Settings() {
                   active && !locked ? "border-neon bg-neon/5 glow-neon" : "border-border hover:border-neon/40"
                 } ${locked ? "opacity-70" : ""}`}
               >
-                <div>
+                <div className="min-w-0 flex-1 pr-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-display text-sm font-semibold">{p.label}</span>
+                    <span className="font-display text-base font-bold">{p.label}</span>
                     {locked && <CrownIcon className="h-3 w-3 text-warning" />}
                     <span className={`ml-1 font-mono text-[10px] ${active && !locked ? "text-neon" : "text-muted-foreground"}`}>
                       [{active && !locked ? t("set.protoActive") : t("set.protoReady")}]
                     </span>
                   </div>
                   <p className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{p.sub}</p>
+                  <p className="mt-1 text-[12px] leading-snug text-neon/80">{p.desc}</p>
                 </div>
                 <div className={`h-4 w-4 rounded-full border-2 ${active && !locked ? "border-neon bg-neon" : "border-border"}`} />
               </button>
@@ -223,33 +242,36 @@ export default function Settings() {
             {networkTrust.toUpperCase()}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {(["trusted", "untrusted", "offline"] as const).map((tr) => (
+        <div className="mt-2 flex flex-col gap-2">
+          {(
+            [
+              { id: "trusted", label: "SIM TRUSTED", desc: t("set.simTrustedDesc", "Безопасная сеть") },
+              { id: "untrusted", label: "SIM UNTRUSTED", desc: t("set.simUntrustedDesc", "Незнакомая сеть") },
+              { id: "offline", label: "SIM OFFLINE", desc: t("set.simOfflineDesc", "Режим без интернета") },
+            ] as const
+          ).map((s) => (
             <button
-              key={tr}
+              key={s.id}
               onClick={() => {
                 haptic(8);
-                vpnEngine.simulateNetworkChange(tr);
+                vpnEngine.simulateNetworkChange(s.id);
               }}
-              className="rounded-md border border-dashed border-border bg-background/50 py-1.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground transition hover:border-neon/40 hover:text-neon"
+              className={`flex w-full items-center justify-between rounded-md border border-dashed border-border bg-background/50 px-3 py-2 text-left transition hover:border-neon/40 ${
+                networkTrust === s.id ? "border-neon/60 text-neon" : "text-muted-foreground"
+              }`}
             >
-              // SIM {tr}
+              <div className="flex flex-col">
+                <span className="font-mono text-[10px] uppercase tracking-widest">// {s.label}</span>
+                <span className="ml-3 mt-0.5 font-mono text-[10px] normal-case text-neon/80">{s.desc}</span>
+              </div>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  networkTrust === s.id ? "animate-glow bg-neon" : "bg-border"
+                }`}
+              />
             </button>
           ))}
         </div>
-      </Section>
-
-      <Section title={t("set.support", "ПОДДЕРЖКА И РАЗРАБОТКА")}>
-        <SupportLink
-          label={t("prof.chat")}
-          sub={t("prof.chatSub")}
-          icon="💬"
-        />
-        <SupportLink
-          label={t("prof.github")}
-          sub={t("prof.githubSub")}
-          icon="</>"
-        />
       </Section>
 
       <p className="mt-8 text-center font-mono text-[10px] text-muted-foreground">{t("set.build")}</p>
@@ -383,27 +405,3 @@ function Switch({ checked = false, onChange }: { checked?: boolean; onChange?: (
     </button>
   );
 }
-
-const SupportLink = React.forwardRef<HTMLButtonElement, { label: string; sub: string; icon: string }>(
-  ({ label, sub, icon }, ref) => (
-    <button
-      ref={ref}
-      type="button"
-      className="flex w-full items-center justify-between gap-3 border-b border-border py-3 text-left last:border-0 transition hover:text-neon"
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background font-mono text-sm text-neon">
-          {icon}
-        </div>
-        <div>
-          <p className="font-display text-sm font-semibold">{label}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{sub}</p>
-        </div>
-      </div>
-      <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted-foreground rtl:rotate-180" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
-      </svg>
-    </button>
-  )
-);
-SupportLink.displayName = "SupportLink";
