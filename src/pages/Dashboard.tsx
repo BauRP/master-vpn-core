@@ -317,20 +317,11 @@ function StatusPill({ label, value, active }: { label: string; value: string; ac
   );
 }
 
-function Sparkline({ label, value, series, color }: { label: string; value: string; series: number[]; color: string }) {
-  const max = Math.max(...series, 100);
-  const w = 120;
-  const h = 36;
-  const pts = series.map((v, i) => `${(i / (series.length - 1)) * w},${h - (v / max) * h}`).join(" ");
+function ThroughputRow({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
-        <span className="font-mono text-sm font-semibold" style={{ color }}>{value}</span>
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="mt-1 w-full">
-        <polyline fill="none" stroke={color} strokeWidth="1.5" points={pts} />
-      </svg>
+    <div className="flex items-baseline justify-between">
+      <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
+      <span className="font-mono text-sm font-semibold" style={{ color }}>{value}</span>
     </div>
   );
 }
