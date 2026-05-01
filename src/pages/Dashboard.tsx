@@ -235,6 +235,31 @@ export default function Dashboard() {
   );
 }
 
+/**
+ * Derive supplementary-row alerts from VPN/security state.
+ * Returns [] when there is nothing to surface — the container collapses to 0px.
+ */
+function buildDashboardAlerts(args: {
+  leakDetected: boolean;
+  reconnecting: boolean;
+  fallbackPort: number;
+  connected: boolean;
+  stealthMode: string;
+  isPremium: boolean;
+}): DashboardAlert[] {
+  const out: DashboardAlert[] = [];
+  if (args.leakDetected) {
+    out.push({ id: "leak", tone: "danger", label: "DNS LEAK DETECTED", value: "BLOCKED" });
+  }
+  if (args.reconnecting) {
+    out.push({ id: "reconnect", tone: "warn", label: "TUNNEL RECONNECTING", value: "HOLD" });
+  }
+  if (args.connected && args.isPremium && args.stealthMode === "elite") {
+    out.push({ id: "stealth", tone: "info", label: "ELITE OBFUSCATION", value: `:${args.fallbackPort}` });
+  }
+  return out;
+}
+
 function Card({ label, value, dot }: { label: string; value: string; dot?: "success" | "warn" }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
