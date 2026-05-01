@@ -177,6 +177,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <DashboardBandwidthExtra alerts={buildDashboardAlerts({ leakDetected, reconnecting, fallbackPort, connected, stealthMode, isPremium })} />
+
       <div className="mt-3 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
