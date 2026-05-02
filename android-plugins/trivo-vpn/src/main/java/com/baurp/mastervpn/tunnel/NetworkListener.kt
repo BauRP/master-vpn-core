@@ -19,7 +19,7 @@ import android.net.wifi.WifiManager
  */
 class NetworkListener(
     private val context: Context,
-    private val onChange: (trust: String) -> void,
+    private val onChange: (trust: String) -> Unit,
 ) {
     private val cm by lazy {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
