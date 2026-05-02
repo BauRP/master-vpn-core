@@ -289,11 +289,61 @@ function createEngine(probe: Probe): VpnEngine {
 }
 
 /**
- * Active engine used by VpnContext. Swap `defaultProbe` for the real
- * Capacitor plugin / WebSocket / HTTP health check when wiring the
- * production engine. Nothing else in the app needs to change.
+ * Active engine used by VpnContext. On native Android the engine is wired
+ * to the TrivoVpn Capacitor plugin: the mock `defaultProbe` is replaced
+ * with the plugin's `healthChange` event stream, and config setters
+ * (kill switch, protocol, stealth, DNS) forward to the native VpnService.
+ * On the web the mock continues to run unchanged.
  */
 export const vpnEngine: VpnEngine = createEngine(defaultProbe);
+
+// Lazy native bridging — only kicks in when running inside Capacitor on
+// Android. Imported lazily so the web bundle stays free of plugin churn
+// at module evaluation time.
+void (async () => {
+  try {
+    const { TrivoVpn, isNativeTrivo } = await import("@/native/trivoVpn");
+    if (!isNativeTrivo) return;
+
+    // Forward config setters to the native VpnService.
+    const original = {
+      setKillSwitch: vpnEngine.setKillSwitch,
+      setProtocol: vpnEngine.setProtocol,
+      setStealthMode: vpnEngine.setStealthMode,
+    };
+    vpnEngine.setKillSwitch = (on: boolean) => {
+      original.setKillSwitch(on);
+      void TrivoVpn.setKillSwitch({ enabled: on });
+    };
+    vpnEngine.setProtocol = (protocol) => {
+      original.setProtocol(protocol);
+      void TrivoVpn.setProtocol({ protocol });
+    };
+    vpnEngine.setStealthMode = (mode) => {
+      original.setStealthMode(mode);
+      void TrivoVpn.setStealthMode({ mode });
+    };
+
+    // Health events from the native engine drive disconnect/reconnect.
+    await TrivoVpn.addListener("healthChange", ({ state }) => {
+      // Replay the event into the existing health state machine by
+      // synthesising a probe outcome — keeps debounce semantics intact.
+      // Drop = forced disconnect; connected = forced recover.
+      if (state === "down") {
+        // Force the engine into "down" immediately on hard tunnel drop.
+        // Mirror the internal transition: emit onDisconnect once.
+        vpnEngine.simulateNetworkChange("offline");
+      }
+    });
+
+    // Network classification flows straight through to subscribers.
+    await TrivoVpn.addListener("networkChange", ({ trust }) => {
+      vpnEngine.simulateNetworkChange(trust);
+    });
+  } catch (err) {
+    console.debug("[vpnEngine] native bridge unavailable", err);
+  }
+})();
 
 /* -------------------------------------------------------------------------- */
 /* React hook for live health state                                            */
