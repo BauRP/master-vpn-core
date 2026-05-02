@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useI18n } from "@/i18n/I18nProvider";
 import { useServers, type ServerRow } from "@/lib/servers/useServers";
 import { useVpn } from "@/components/mastervpn/VpnContext";
+import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
 const PING_INTERVAL_MS = 3000;
 const PING_TIMEOUT_MS = 2500;
@@ -34,9 +35,20 @@ const REGION_ORDER: Array<"europe" | "asia" | "america" | "other"> = [
 ];
 
 async function probeRtt(host: string, port: number): Promise<number | null> {
-  // Browser-only approximation: HTTPS HEAD with timeout.
-  // Cannot do raw TCP/ICMP. Will only succeed for hosts that accept HTTPS on
-  // the given port — others surface as null (shown as "—").
+  // Native path: real TCP-connect RTT via the Capacitor plugin (Kotlin
+  // PingModule on Dispatchers.IO). This is what reflects actual VPN-port
+  // reachability.
+  if (isNativeTrivo) {
+    try {
+      const { rttMs } = await TrivoVpn.tcpPing({ host, port, timeoutMs: PING_TIMEOUT_MS });
+      return rttMs;
+    } catch {
+      return null;
+    }
+  }
+
+  // Web fallback: HTTPS HEAD with timeout. Cannot do raw TCP/ICMP from a
+  // browser — only succeeds for hosts that accept HTTPS on the given port.
   const start = performance.now();
   try {
     const ctl = new AbortController();
