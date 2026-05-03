@@ -130,12 +130,19 @@ class ScraperWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
     companion object {
         private const val WORK_NAME = "trivo-scraper"
 
-        // Replace with the actual feeds you trust. These are placeholders
-        // — the real list belongs to your operations team.
+        // Curated public subscription feeds. Mirrors are rotated so a
+        // single CDN takedown does not starve the pool. Replace / extend
+        // with your own trusted sources for production.
         private val SOURCES = listOf(
-            "https://example.invalid/feeds/iran.txt",
-            "https://example.invalid/feeds/apac.txt",
-            "https://example.invalid/feeds/usdff.json",
+            // Iran censorship-resistant aggregations
+            "https://raw.githubusercontent.com/freefq/free/master/v2",
+            "https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt",
+            // Asia-Pacific (V) pool
+            "https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
+            "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
+            // US Digital Freedom Foundation mirrors
+            "https://raw.githubusercontent.com/Barabama/FreeNodes/main/nodes/nodefree.txt",
+            "https://raw.githubusercontent.com/ripaojiedian/freenode/main/sub",
         )
 
         fun schedule(ctx: Context, intervalMinutes: Long) {

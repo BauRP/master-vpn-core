@@ -4,42 +4,35 @@ import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Native VPN tunnel service.
  *
- * This is the skeleton that owns the tun fd. The actual packet I/O loop
- * (Xray-core for vless+reality, v2ray-plugin for shadowsocks, wireguard-go
- * for wireguard) is plugged into the `runEngineLoop()` hook below.
- *
- * Kill Switch enforcement:
- *  - While active, the builder is configured with `setBlockingMode(true)`
- *    and a default IPv4/IPv6 route. If the engine drops, we keep the tun
- *    fd open and route packets to a black hole — never letting traffic
- *    spill onto the clear network.
- *
- * Split Tunnel:
- *  - `disallowedApps` is iterated and each package is excluded from the
- *    tunnel via `addDisallowedApplication`. The descriptor is rebuilt on
- *    every `ACTION_SET_*` to apply changes.
- *
- * DNS:
- *  - The provided DNS list (default 1.1.1.1 / 1.0.0.1) is forced through
- *    `addDnsServer`, bypassing ISP DNS regardless of system settings.
+ * Owns the tun fd. The Xray / wireguard-go core binary is shipped in
+ * `assets/core/` (or `jniLibs/`) and exec'd as a subprocess. stdout/stderr
+ * are piped to logcat ("TrivoCore"). On crash: Kill Switch immediately
+ * blocks all traffic, then exponential-backoff reconnect kicks in.
  */
 class TrivoVpnService : VpnService() {
 
     private var fd: ParcelFileDescriptor? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var engineJob: Job? = null
+    private var coreProcess: Process? = null
 
     private var protocol: String = "wireguard"
     private var killSwitch: Boolean = true
@@ -47,6 +40,8 @@ class TrivoVpnService : VpnService() {
     private var dns: List<String> = listOf("1.1.1.1", "1.0.0.1")
     private var disallowedApps: List<String> = emptyList()
     private var serverConfig: JSONObject? = null
+
+    private var backoffAttempt = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -93,65 +88,148 @@ class TrivoVpnService : VpnService() {
             .addRoute("::", 0)
 
         dns.forEach { b.addDnsServer(it) }
-
-        // Split Tunnel — exclude user-specified packages from the tunnel.
         disallowedApps.forEach {
             try { b.addDisallowedApplication(it) } catch (_: Throwable) {}
         }
-
-        // Kill Switch — block traffic while builder is reconfigured / engine drops.
         try { b.setBlocking(true) } catch (_: Throwable) {}
         if (killSwitch) {
-            // setBlockingMode lives on newer API levels; fall back silently.
             try { b.javaClass.getMethod("setBlockingMode", Boolean::class.java).invoke(b, true) } catch (_: Throwable) {}
         }
         return b
     }
 
     private fun startTunnel() {
-        try {
-            fd?.close()
-        } catch (_: Throwable) {}
+        try { fd?.close() } catch (_: Throwable) {}
         fd = buildBuilder().establish()
         engineJob?.cancel()
         engineJob = scope.launch { runEngineLoop() }
     }
 
-    private fun restartTunnel() {
-        startTunnel()
-    }
+    private fun restartTunnel() = startTunnel()
 
     private fun stopSelfAndTunnel() {
         engineJob?.cancel()
         engineJob = null
+        killCoreProcess()
         try { fd?.close() } catch (_: Throwable) {}
         fd = null
+        broadcastHealth("down")
         stopSelf()
     }
 
     /**
-     * Engine I/O loop hook.
-     *
-     * Replace this with a call into the native bridge:
-     *   - vless-reality  → Xray-core JNI (libxray.so)
-     *   - shadowsocks    → v2ray-plugin (libssr.so) + obfs random-noise
-     *   - wireguard      → wireguard-go (libwg.so)
-     *
-     * The fd from `establish()` is handed to the engine which performs
-     * userspace TCP/UDP encapsulation. Health pings should be emitted
-     * back to the plugin via a LocalBroadcast so JS can react.
+     * Build a temporary core configuration JSON for the selected protocol
+     * + server pair. Written to the app's cache dir and consumed by the
+     * exec'd core binary via `--config <path>`.
      */
-    private suspend fun runEngineLoop() {
-        // TODO: wire native engine. Currently a no-op placeholder so the
-        // tun fd stays open and packets are dropped (Kill Switch behavior).
+    private fun generateConfigFile(): File {
+        val cfg = JSONObject().apply {
+            put("protocol", protocol)
+            put("dns", JSONArray(dns))
+            put("server", serverConfig ?: JSONObject())
+            put("stealth", stealth)
+        }
+        val out = File(cacheDir, "trivo-core.json")
+        FileOutputStream(out).use { it.write(cfg.toString().toByteArray()) }
+        return out
+    }
+
+    /**
+     * Locate the core binary. Production: ship as a native lib in
+     * `jniLibs/<abi>/libtrivocore.so` so PackageManager extracts it and
+     * the path is `applicationInfo.nativeLibraryDir`.
+     */
+    private fun coreBinary(): File {
+        val nativeDir = applicationInfo.nativeLibraryDir
+        return File(nativeDir, "libtrivocore.so")
+    }
+
+    /**
+     * Engine I/O loop.
+     *
+     * 1. Writes a fresh config file from current protocol/server state.
+     * 2. Execs the core binary, handing the tun fd via `--tunfd <int>`.
+     * 3. Pipes stdout + stderr to logcat for debugging.
+     * 4. If the process exits non-zero (crash): Kill Switch keeps the tun
+     *    fd open (default route to black hole) and we schedule a backoff
+     *    reconnect. On clean stop the loop exits silently.
+     */
+    private suspend fun runEngineLoop() = withContext(Dispatchers.IO) {
+        broadcastHealth("connected")
+        while (isActive) {
+            val config = try { generateConfigFile() } catch (t: Throwable) {
+                Log.e(TAG, "config gen failed", t); break
+            }
+            val bin = coreBinary()
+            if (!bin.exists()) {
+                Log.w(TAG, "core binary missing at ${bin.absolutePath} — Kill Switch holding traffic")
+                broadcastHealth("down")
+                if (!killSwitch) break
+                delay(backoffDelay()); continue
+            }
+            val tunFd = fd?.fd ?: run {
+                Log.e(TAG, "tun fd unavailable"); break
+            }
+            val pb = ProcessBuilder(
+                bin.absolutePath,
+                "--config", config.absolutePath,
+                "--tunfd", tunFd.toString(),
+            ).redirectErrorStream(true)
+
+            val proc = try { pb.start() } catch (t: Throwable) {
+                Log.e(TAG, "core exec failed", t); broadcastHealth("down")
+                if (!killSwitch) break
+                delay(backoffDelay()); continue
+            }
+            coreProcess = proc
+
+            // Pipe stdout/stderr to logcat on a side coroutine so the loop
+            // can await exit without buffering deadlocks.
+            launch {
+                proc.inputStream.bufferedReader().useLines { lines ->
+                    lines.forEach { Log.d(TAG_CORE, it) }
+                }
+            }
+
+            val exit = try { proc.waitFor() } catch (_: InterruptedException) { -1 }
+            coreProcess = null
+            if (!isActive) break
+            Log.w(TAG, "core exited code=$exit — Kill Switch active, scheduling reconnect")
+            broadcastHealth("down")
+            if (!killSwitch) break
+            backoffAttempt += 1
+            delay(backoffDelay())
+            broadcastHealth("connected")
+        }
+    }
+
+    private fun backoffDelay(): Long {
+        val base = 800L
+        val max = 15_000L
+        return (base * (1L shl backoffAttempt.coerceAtMost(5))).coerceAtMost(max)
+    }
+
+    private fun killCoreProcess() {
+        try { coreProcess?.destroy() } catch (_: Throwable) {}
+        coreProcess = null
+    }
+
+    private fun broadcastHealth(state: String) {
+        val i = Intent(BROADCAST_HEALTH).apply { putExtra("state", state) }
+        sendBroadcast(i)
     }
 
     override fun onDestroy() {
         scope.cancel()
+        killCoreProcess()
         super.onDestroy()
     }
 
     companion object {
+        private const val TAG = "TrivoVpnService"
+        private const val TAG_CORE = "TrivoCore"
+        const val BROADCAST_HEALTH = "com.baurp.mastervpn.HEALTH"
+
         const val ACTION_START = "com.baurp.mastervpn.START"
         const val ACTION_STOP = "com.baurp.mastervpn.STOP"
         const val ACTION_SET_PROTOCOL = "com.baurp.mastervpn.SET_PROTOCOL"

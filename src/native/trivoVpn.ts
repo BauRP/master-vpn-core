@@ -35,6 +35,8 @@ export interface TrivoVpnPlugin {
   setStealthMode(opts: { mode: "standard" | "elite" }): Promise<void>;
   scheduleScraper(opts: { intervalMinutes: number }): Promise<{ scheduled: boolean }>;
   cancelScraper(): Promise<void>;
+  isIgnoringBatteryOptimizations(): Promise<{ ignoring: boolean }>;
+  requestIgnoreBatteryOptimizations(): Promise<{ requested: boolean }>;
   addListener(
     event: "healthChange",
     cb: (e: { state: NativeHealth }) => void,
@@ -62,6 +64,8 @@ const webFallback: TrivoVpnPlugin = {
   async setStealthMode() {},
   async scheduleScraper() { return { scheduled: false }; },
   async cancelScraper() {},
+  async isIgnoringBatteryOptimizations() { return { ignoring: true }; },
+  async requestIgnoreBatteryOptimizations() { return { requested: false }; },
   async addListener() { return noopHandle; },
 };
 

@@ -181,6 +181,29 @@ class TrivoVpnPlugin : Plugin() {
         call.resolve()
     }
 
+    /* ---------------- Battery optimization ---------------- */
+
+    @PluginMethod
+    fun isIgnoringBatteryOptimizations(call: PluginCall) {
+        val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        val ignoring = pm.isIgnoringBatteryOptimizations(context.packageName)
+        call.resolve(JSObject().put("ignoring", ignoring))
+    }
+
+    @PluginMethod
+    fun requestIgnoreBatteryOptimizations(call: PluginCall) {
+        val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = android.net.Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(intent)
+            call.resolve(JSObject().put("requested", true))
+        } catch (t: Throwable) {
+            call.reject("battery optimization prompt failed: ${t.message}")
+        }
+    }
+
     /* ---------------- Health bridge (called by service via broadcast) ---------------- */
 
     fun emitHealth(state: String) {
