@@ -7,6 +7,7 @@ import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { ServerSheet } from "@/components/mastervpn/ServerSheet";
 import { useServers } from "@/lib/servers/useServers";
 import { DashboardBandwidthExtra, type DashboardAlert } from "@/components/mastervpn/DashboardBandwidthExtra";
+import { BatteryOptHint } from "@/components/mastervpn/BatteryOptHint";
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -183,6 +184,7 @@ export default function Dashboard() {
       </div>
 
       <DashboardBandwidthExtra alerts={dashboardAlerts} />
+      <BatteryOptHint />
 
       <div className={`mt-4 rounded-xl border border-border bg-card p-4`}>
         <div className="flex items-center justify-between">
