@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { vpnEngine, type NetworkTrust, type VpnProtocol, type StealthMode } from "./vpnEngine";
+import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
 type VpnState = {
   connected: boolean;
@@ -287,6 +288,13 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     backoffAttempt.current = 0;
     triggerCooldown();
     setConnecting(true);
+    if (isNativeTrivo) {
+      void TrivoVpn.start({
+        protocol,
+        killSwitch,
+        dns: DNS_SERVERS,
+      }).catch((err) => console.warn("[vpn] native start failed", err));
+    }
     if (handshake.current) clearTimeout(handshake.current);
     handshake.current = setTimeout(() => {
       setConnecting(false);
@@ -297,7 +305,7 @@ export function VpnProvider({ children }: { children: ReactNode }) {
       setDownSeries(Array(SERIES_LEN).fill(0));
       setUpSeries(Array(SERIES_LEN).fill(0));
     }, 600);
-  }, [connected, connecting, cooldown]);
+  }, [connected, connecting, cooldown, protocol, killSwitch]);
 
   const disconnect = useCallback(() => {
     if (cooldown) return;
@@ -310,6 +318,9 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     if (backoffTimer.current) {
       clearTimeout(backoffTimer.current);
       backoffTimer.current = null;
+    }
+    if (isNativeTrivo) {
+      void TrivoVpn.stop().catch(() => {});
     }
     triggerCooldown();
     setConnecting(false);
