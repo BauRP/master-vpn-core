@@ -69,6 +69,7 @@ const webFallback: TrivoVpnPlugin = {
   async setProtocol() {},
   async setKillSwitch() {},
   async setStealthMode() {},
+  async setAcceleration() {},
   async scheduleScraper() { return { scheduled: false }; },
   async cancelScraper() {},
   async isIgnoringBatteryOptimizations() { return { ignoring: true }; },
