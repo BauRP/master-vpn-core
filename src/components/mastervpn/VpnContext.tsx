@@ -139,6 +139,14 @@ export function VpnProvider({ children }: { children: ReactNode }) {
       }
       const srv = window.localStorage.getItem(SERVER_KEY);
       if (srv) setSelectedServerIdState(srv);
+      const ac = window.localStorage.getItem(ACCEL_KEY);
+      const accelOn = ac === null ? true : ac === "1";
+      setSmartAccelState(accelOn);
+      const cmp = window.localStorage.getItem(COMPRESS_KEY) === "1";
+      setCompressionState(cmp);
+      if (isNativeTrivo) {
+        void TrivoVpn.setAcceleration({ smartAccel: accelOn, compression: cmp, mtu: MTU_DEFAULT }).catch(() => {});
+      }
     } catch {}
     vpnEngine.setDnsServers(DNS_SERVERS);
   }, []);
