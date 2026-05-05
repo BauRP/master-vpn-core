@@ -77,6 +77,12 @@ class TrivoVpnService : VpnService() {
                 if (stealth == "elite") protocol = "vless-reality"
                 if (fd != null) restartTunnel()
             }
+            ACTION_SET_ACCELERATION -> {
+                smartAccel = intent.getBooleanExtra(EXTRA_SMART_ACCEL, smartAccel)
+                compression = intent.getBooleanExtra(EXTRA_COMPRESSION, compression)
+                mtu = intent.getIntExtra(EXTRA_MTU, mtu).coerceIn(1280, 1500)
+                if (fd != null) restartTunnel()
+            }
         }
         return START_STICKY
     }
