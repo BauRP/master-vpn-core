@@ -13,7 +13,7 @@ export default function Dashboard() {
   const { t } = useI18n();
   const { stealth, pqc, leakDetected, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
-  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId } = useVpn();
+  const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId, smartAccel, mtu } = useVpn();
   const { data: serverData } = useServers();
   const [sheetOpen, setSheetOpen] = useState(false);
 
