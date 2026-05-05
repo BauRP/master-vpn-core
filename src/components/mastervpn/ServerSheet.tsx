@@ -131,6 +131,23 @@ export function ServerSheet({
 
   const totalCount = data?.servers?.length ?? 0;
 
+  // "Optimal (fastest)" — single best-latency node across all regions.
+  // Recomputed every time livePings updates so the badge stays accurate.
+  const fastest = useMemo<ServerRow | null>(() => {
+    const list = data?.servers ?? [];
+    if (!list.length) return null;
+    let best: ServerRow | null = null;
+    let bestMs = Infinity;
+    for (const s of list) {
+      const ms = livePings[s.id] ?? s.latency_ms;
+      if (ms != null && ms < bestMs) {
+        bestMs = ms;
+        best = s;
+      }
+    }
+    return best;
+  }, [data, livePings]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
