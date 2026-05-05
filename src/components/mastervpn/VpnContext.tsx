@@ -97,6 +97,8 @@ export function VpnProvider({ children }: { children: ReactNode }) {
   const [protocol, setProtocolState] = useState<VpnProtocol>("wireguard");
   const [stealthMode, setStealthModeState] = useState<StealthMode>("standard");
   const [selectedServerId, setSelectedServerIdState] = useState<string | null>(null);
+  const [smartAccel, setSmartAccelState] = useState(true);
+  const [compression, setCompressionState] = useState(false);
 
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handshake = useRef<ReturnType<typeof setTimeout> | null>(null);
