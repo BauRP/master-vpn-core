@@ -56,12 +56,16 @@ const SERIES_LEN = 24;
 const COOLDOWN_MS = 800;
 const BACKOFF_BASE_MS = 600;
 const BACKOFF_MAX_MS = 8000;
-const DNS_SERVERS = ["1.1.1.1", "1.0.0.1"]; // Cloudflare — bypasses ISP DNS
+// Encrypted DNS resolvers (DoH-capable on native): Cloudflare + Google.
+const DNS_SERVERS = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"];
+const MTU_DEFAULT = 1400;
 const KS_KEY = "mastervpn.killswitch";
 const AP_KEY = "mastervpn.autoprotect";
 const PROTO_KEY = "mastervpn.protocol";
 const STEALTH_KEY = "mastervpn.stealthmode";
 const SERVER_KEY = "mastervpn.selectedServer";
+const ACCEL_KEY = "mastervpn.smartAccel";
+const COMPRESS_KEY = "mastervpn.compression";
 
 /**
  * Global VPN connection provider.
