@@ -97,7 +97,9 @@ class TrivoVpnService : VpnService() {
     private fun buildBuilder(): Builder {
         val b = Builder()
             .setSession("Trivo VPN")
-            .setMtu(1420)
+            // Clamp MTU to 1400 — prevents fragmentation across mobile
+            // ISPs that drop oversized packets (PMTUD black-hole).
+            .setMtu(mtu)
             .addAddress("10.10.10.2", 32)
             .addAddress("fd00::2", 128)
             .addRoute("0.0.0.0", 0)
