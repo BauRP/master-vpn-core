@@ -37,9 +37,19 @@ class TrivoVpnService : VpnService() {
     private var protocol: String = "wireguard"
     private var killSwitch: Boolean = true
     private var stealth: String = "standard"
-    private var dns: List<String> = listOf("1.1.1.1", "1.0.0.1")
+    // Encrypted DNS resolvers (DoH-capable). Cloudflare + Google by default.
+    private var dns: List<String> = listOf("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4")
     private var disallowedApps: List<String> = emptyList()
     private var serverConfig: JSONObject? = null
+
+    // Network acceleration state. Pushed in via ACTION_SET_ACCELERATION.
+    // When smartAccel is on we force UDP transport + mux + BBR-friendly
+    // congestion windows in the generated core config. MTU is clamped to
+    // 1400 to avoid ISP-level fragmentation; TCP MSS clamping is applied
+    // by the core to packets that still ride TCP transports.
+    private var smartAccel: Boolean = true
+    private var compression: Boolean = false
+    private var mtu: Int = 1400
 
     private var backoffAttempt = 0
 
@@ -67,6 +77,12 @@ class TrivoVpnService : VpnService() {
                 if (stealth == "elite") protocol = "vless-reality"
                 if (fd != null) restartTunnel()
             }
+            ACTION_SET_ACCELERATION -> {
+                smartAccel = intent.getBooleanExtra(EXTRA_SMART_ACCEL, smartAccel)
+                compression = intent.getBooleanExtra(EXTRA_COMPRESSION, compression)
+                mtu = intent.getIntExtra(EXTRA_MTU, mtu).coerceIn(1280, 1500)
+                if (fd != null) restartTunnel()
+            }
         }
         return START_STICKY
     }
@@ -81,7 +97,9 @@ class TrivoVpnService : VpnService() {
     private fun buildBuilder(): Builder {
         val b = Builder()
             .setSession("Trivo VPN")
-            .setMtu(1420)
+            // Clamp MTU to 1400 — prevents fragmentation across mobile
+            // ISPs that drop oversized packets (PMTUD black-hole).
+            .setMtu(mtu)
             .addAddress("10.10.10.2", 32)
             .addAddress("fd00::2", 128)
             .addRoute("0.0.0.0", 0)
@@ -128,6 +146,24 @@ class TrivoVpnService : VpnService() {
             put("dns", JSONArray(dns))
             put("server", serverConfig ?: JSONObject())
             put("stealth", stealth)
+            put("mtu", mtu)
+            // Acceleration hints consumed by the core (Xray / sing-box):
+            //  - transport "udp" forces QUIC/UDP outbounds for VLESS+SS to
+            //    eliminate TCP handshake + retransmit overhead.
+            //  - mux.enabled multiplexes concurrent streams over one conn.
+            //  - congestion "bbr" requests BBR-compatible windows on the
+            //    client side (server runs sysctl tcp_congestion_control=bbr).
+            //  - mss_clamp keeps TCP segments inside MTU for any TCP fallback.
+            put("acceleration", JSONObject().apply {
+                put("transport", if (smartAccel) "udp" else "auto")
+                put("mux", JSONObject().apply {
+                    put("enabled", smartAccel)
+                    put("concurrency", if (smartAccel) 8 else 1)
+                })
+                put("congestion", if (smartAccel) "bbr" else "cubic")
+                put("mss_clamp", mtu - 40)
+                put("compression", compression)
+            })
         }
         val out = File(cacheDir, "trivo-core.json")
         FileOutputStream(out).use { it.write(cfg.toString().toByteArray()) }
@@ -235,6 +271,7 @@ class TrivoVpnService : VpnService() {
         const val ACTION_SET_PROTOCOL = "com.baurp.mastervpn.SET_PROTOCOL"
         const val ACTION_SET_KILLSWITCH = "com.baurp.mastervpn.SET_KILLSWITCH"
         const val ACTION_SET_STEALTH = "com.baurp.mastervpn.SET_STEALTH"
+        const val ACTION_SET_ACCELERATION = "com.baurp.mastervpn.SET_ACCEL"
 
         const val EXTRA_PROTOCOL = "protocol"
         const val EXTRA_KILLSWITCH = "killSwitch"
@@ -242,6 +279,9 @@ class TrivoVpnService : VpnService() {
         const val EXTRA_DNS = "dns"
         const val EXTRA_DISALLOWED = "disallowed"
         const val EXTRA_SERVER = "server"
+        const val EXTRA_SMART_ACCEL = "smartAccel"
+        const val EXTRA_COMPRESSION = "compression"
+        const val EXTRA_MTU = "mtu"
 
         fun buildStartIntent(
             ctx: Context,

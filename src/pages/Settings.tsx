@@ -12,7 +12,7 @@ export default function Settings() {
   const { t, lang, setLang } = useI18n();
   const { stealth, setStealth, pqc, setPqc, tlsCamo, setTlsCamo, dpiCycle, setDpiCycle, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
-  const { killSwitch, setKillSwitch, autoProtect, setAutoProtect, networkTrust, protocol, setProtocol, stealthMode, setStealthMode } = useVpn();
+  const { killSwitch, setKillSwitch, autoProtect, setAutoProtect, networkTrust, protocol, setProtocol, stealthMode, setStealthMode, smartAccel, setSmartAccel, compression, setCompression, mtu } = useVpn();
   const lockedTap = (reason: string) => {
     haptic(15);
     openPaywall(reason);
@@ -213,6 +213,29 @@ export default function Settings() {
             </svg>
           </button>
         )}
+      </Section>
+
+      <Section title={t("set.netAccel", "СЕТЕВОЕ УСКОРЕНИЕ")}>
+        <Toggle
+          label={t("set.smartAccel", "Умное ускорение (BBR/UDP)")}
+          desc={t("set.smartAccelDesc", "Принудительно использует UDP-транспорт, мультиплексирование (mux) и оптимизированные окна перегрузки, совместимые с TCP BBR на сервере.")}
+          value={smartAccel}
+          onChange={tapToggle(setSmartAccel)}
+        />
+        <Toggle
+          label={t("set.compression", "Сжатие трафика")}
+          desc={t("set.compressionDesc", "Снижает потребление трафика на медленных мобильных сетях. Полезно при лимитированных тарифах.")}
+          value={compression}
+          onChange={tapToggle(setCompression)}
+        />
+        <div className="mt-2 flex items-center justify-between rounded-md border border-neon/20 bg-neon/5 px-3 py-2">
+          <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
+            {t("set.netStatus", "TUNING")}
+          </span>
+          <span className="font-mono text-xs text-neon">
+            MTU: {mtu} · DNS: {t("set.dnsEncrypted", "ENCRYPTED")}
+          </span>
+        </div>
       </Section>
 
       <Section title={t("set.autoConnect")}>

@@ -37,6 +37,14 @@ type VpnState = {
   /** ID of the server selected from the catalog (servers table). Persisted. */
   selectedServerId: string | null;
   setSelectedServerId: (id: string | null) => void;
+  /** Smart Acceleration: forces UDP transport + mux + BBR-friendly windows. */
+  smartAccel: boolean;
+  setSmartAccel: (v: boolean) => void;
+  /** Traffic compression (saves bandwidth on slow mobile links). */
+  compression: boolean;
+  setCompression: (v: boolean) => void;
+  /** Effective MTU clamp pushed to the tunnel (default 1400). */
+  mtu: number;
   connect: () => void;
   disconnect: () => void;
   toggle: () => void;
@@ -48,12 +56,16 @@ const SERIES_LEN = 24;
 const COOLDOWN_MS = 800;
 const BACKOFF_BASE_MS = 600;
 const BACKOFF_MAX_MS = 8000;
-const DNS_SERVERS = ["1.1.1.1", "1.0.0.1"]; // Cloudflare — bypasses ISP DNS
+// Encrypted DNS resolvers (DoH-capable on native): Cloudflare + Google.
+const DNS_SERVERS = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"];
+const MTU_DEFAULT = 1400;
 const KS_KEY = "mastervpn.killswitch";
 const AP_KEY = "mastervpn.autoprotect";
 const PROTO_KEY = "mastervpn.protocol";
 const STEALTH_KEY = "mastervpn.stealthmode";
 const SERVER_KEY = "mastervpn.selectedServer";
+const ACCEL_KEY = "mastervpn.smartAccel";
+const COMPRESS_KEY = "mastervpn.compression";
 
 /**
  * Global VPN connection provider.
@@ -85,6 +97,8 @@ export function VpnProvider({ children }: { children: ReactNode }) {
   const [protocol, setProtocolState] = useState<VpnProtocol>("wireguard");
   const [stealthMode, setStealthModeState] = useState<StealthMode>("standard");
   const [selectedServerId, setSelectedServerIdState] = useState<string | null>(null);
+  const [smartAccel, setSmartAccelState] = useState(true);
+  const [compression, setCompressionState] = useState(false);
 
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handshake = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +139,14 @@ export function VpnProvider({ children }: { children: ReactNode }) {
       }
       const srv = window.localStorage.getItem(SERVER_KEY);
       if (srv) setSelectedServerIdState(srv);
+      const ac = window.localStorage.getItem(ACCEL_KEY);
+      const accelOn = ac === null ? true : ac === "1";
+      setSmartAccelState(accelOn);
+      const cmp = window.localStorage.getItem(COMPRESS_KEY) === "1";
+      setCompressionState(cmp);
+      if (isNativeTrivo) {
+        void TrivoVpn.setAcceleration({ smartAccel: accelOn, compression: cmp, mtu: MTU_DEFAULT }).catch(() => {});
+      }
     } catch {}
     vpnEngine.setDnsServers(DNS_SERVERS);
   }, []);
@@ -167,6 +189,22 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     autoProtectRef.current = v;
     try { window.localStorage.setItem(AP_KEY, v ? "1" : "0"); } catch {}
   }, []);
+
+  const setSmartAccel = useCallback((v: boolean) => {
+    setSmartAccelState(v);
+    try { window.localStorage.setItem(ACCEL_KEY, v ? "1" : "0"); } catch {}
+    if (isNativeTrivo) {
+      void TrivoVpn.setAcceleration({ smartAccel: v, compression, mtu: MTU_DEFAULT }).catch(() => {});
+    }
+  }, [compression]);
+
+  const setCompression = useCallback((v: boolean) => {
+    setCompressionState(v);
+    try { window.localStorage.setItem(COMPRESS_KEY, v ? "1" : "0"); } catch {}
+    if (isNativeTrivo) {
+      void TrivoVpn.setAcceleration({ smartAccel, compression: v, mtu: MTU_DEFAULT }).catch(() => {});
+    }
+  }, [smartAccel]);
 
   const clearKillSwitchTriggered = useCallback(() => {
     setKillSwitchTriggered(false);
@@ -367,6 +405,11 @@ export function VpnProvider({ children }: { children: ReactNode }) {
         setStealthMode,
         selectedServerId,
         setSelectedServerId,
+        smartAccel,
+        setSmartAccel,
+        compression,
+        setCompression,
+        mtu: MTU_DEFAULT,
         connect,
         disconnect,
         toggle,

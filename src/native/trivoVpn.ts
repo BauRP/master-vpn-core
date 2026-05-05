@@ -25,6 +25,12 @@ export interface StartOptions {
   disallowedApps?: string[];
 }
 
+export interface AccelerationOptions {
+  smartAccel: boolean;
+  compression: boolean;
+  mtu?: number;
+}
+
 export interface TrivoVpnPlugin {
   tcpPing(opts: TcpPingOptions): Promise<TcpPingResult>;
   icmpPing(opts: TcpPingOptions): Promise<TcpPingResult>;
@@ -33,6 +39,7 @@ export interface TrivoVpnPlugin {
   setProtocol(opts: { protocol: StartOptions["protocol"] }): Promise<void>;
   setKillSwitch(opts: { enabled: boolean }): Promise<void>;
   setStealthMode(opts: { mode: "standard" | "elite" }): Promise<void>;
+  setAcceleration(opts: AccelerationOptions): Promise<void>;
   scheduleScraper(opts: { intervalMinutes: number }): Promise<{ scheduled: boolean }>;
   cancelScraper(): Promise<void>;
   isIgnoringBatteryOptimizations(): Promise<{ ignoring: boolean }>;
@@ -62,6 +69,7 @@ const webFallback: TrivoVpnPlugin = {
   async setProtocol() {},
   async setKillSwitch() {},
   async setStealthMode() {},
+  async setAcceleration() {},
   async scheduleScraper() { return { scheduled: false }; },
   async cancelScraper() {},
   async isIgnoringBatteryOptimizations() { return { ignoring: true }; },

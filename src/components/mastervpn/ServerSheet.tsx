@@ -131,6 +131,23 @@ export function ServerSheet({
 
   const totalCount = data?.servers?.length ?? 0;
 
+  // "Optimal (fastest)" — single best-latency node across all regions.
+  // Recomputed every time livePings updates so the badge stays accurate.
+  const fastest = useMemo<ServerRow | null>(() => {
+    const list = data?.servers ?? [];
+    if (!list.length) return null;
+    let best: ServerRow | null = null;
+    let bestMs = Infinity;
+    for (const s of list) {
+      const ms = livePings[s.id] ?? s.latency_ms;
+      if (ms != null && ms < bestMs) {
+        bestMs = ms;
+        best = s;
+      }
+    }
+    return best;
+  }, [data, livePings]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -175,6 +192,31 @@ export function ServerSheet({
             <div className="px-5 py-8 text-center font-mono text-[11px] text-muted-foreground">
               {t("srv.empty", "СПИСОК ПУСТ — ЖДЁМ СКАНЕР")}
             </div>
+          )}
+
+          {fastest && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedServerId(fastest.id);
+                onOpenChange(false);
+              }}
+              className="mx-5 my-3 flex w-[calc(100%-2.5rem)] items-center gap-3 rounded-lg border border-neon/40 bg-neon/5 px-4 py-3 text-left transition hover:border-neon glow-neon"
+            >
+              <span className="text-2xl leading-none">{fastest.flag ?? "⚡"}</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm font-bold text-neon">
+                  {t("srv.optimal", "Оптимальный (Самый быстрый)")}
+                </p>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
+                  {fastest.country_name ?? fastest.country_code}
+                  {fastest.city ? ` · ${fastest.city}` : ""}
+                </p>
+              </div>
+              <span className="font-mono text-sm font-semibold text-success">
+                {(livePings[fastest.id] ?? fastest.latency_ms) ?? "—"} ms
+              </span>
+            </button>
           )}
 
           {REGION_ORDER.map((region) => {

@@ -166,6 +166,22 @@ class TrivoVpnPlugin : Plugin() {
         call.resolve()
     }
 
+    @PluginMethod
+    fun setAcceleration(call: PluginCall) {
+        val smart = call.getBoolean("smartAccel") ?: true
+        val compression = call.getBoolean("compression") ?: false
+        val mtu = call.getInt("mtu") ?: 1400
+        context.startService(
+            Intent(context, TrivoVpnService::class.java).apply {
+                action = TrivoVpnService.ACTION_SET_ACCELERATION
+                putExtra(TrivoVpnService.EXTRA_SMART_ACCEL, smart)
+                putExtra(TrivoVpnService.EXTRA_COMPRESSION, compression)
+                putExtra(TrivoVpnService.EXTRA_MTU, mtu)
+            }
+        )
+        call.resolve()
+    }
+
     /* ---------------- Scraper (WorkManager) ---------------- */
 
     @PluginMethod
