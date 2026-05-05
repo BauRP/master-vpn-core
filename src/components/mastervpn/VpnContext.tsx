@@ -37,6 +37,14 @@ type VpnState = {
   /** ID of the server selected from the catalog (servers table). Persisted. */
   selectedServerId: string | null;
   setSelectedServerId: (id: string | null) => void;
+  /** Smart Acceleration: forces UDP transport + mux + BBR-friendly windows. */
+  smartAccel: boolean;
+  setSmartAccel: (v: boolean) => void;
+  /** Traffic compression (saves bandwidth on slow mobile links). */
+  compression: boolean;
+  setCompression: (v: boolean) => void;
+  /** Effective MTU clamp pushed to the tunnel (default 1400). */
+  mtu: number;
   connect: () => void;
   disconnect: () => void;
   toggle: () => void;
