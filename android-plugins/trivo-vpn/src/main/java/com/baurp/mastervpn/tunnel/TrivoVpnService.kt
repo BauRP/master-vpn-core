@@ -37,9 +37,19 @@ class TrivoVpnService : VpnService() {
     private var protocol: String = "wireguard"
     private var killSwitch: Boolean = true
     private var stealth: String = "standard"
-    private var dns: List<String> = listOf("1.1.1.1", "1.0.0.1")
+    // Encrypted DNS resolvers (DoH-capable). Cloudflare + Google by default.
+    private var dns: List<String> = listOf("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4")
     private var disallowedApps: List<String> = emptyList()
     private var serverConfig: JSONObject? = null
+
+    // Network acceleration state. Pushed in via ACTION_SET_ACCELERATION.
+    // When smartAccel is on we force UDP transport + mux + BBR-friendly
+    // congestion windows in the generated core config. MTU is clamped to
+    // 1400 to avoid ISP-level fragmentation; TCP MSS clamping is applied
+    // by the core to packets that still ride TCP transports.
+    private var smartAccel: Boolean = true
+    private var compression: Boolean = false
+    private var mtu: Int = 1400
 
     private var backoffAttempt = 0
 
