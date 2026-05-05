@@ -271,6 +271,7 @@ class TrivoVpnService : VpnService() {
         const val ACTION_SET_PROTOCOL = "com.baurp.mastervpn.SET_PROTOCOL"
         const val ACTION_SET_KILLSWITCH = "com.baurp.mastervpn.SET_KILLSWITCH"
         const val ACTION_SET_STEALTH = "com.baurp.mastervpn.SET_STEALTH"
+        const val ACTION_SET_ACCELERATION = "com.baurp.mastervpn.SET_ACCEL"
 
         const val EXTRA_PROTOCOL = "protocol"
         const val EXTRA_KILLSWITCH = "killSwitch"
@@ -278,6 +279,9 @@ class TrivoVpnService : VpnService() {
         const val EXTRA_DNS = "dns"
         const val EXTRA_DISALLOWED = "disallowed"
         const val EXTRA_SERVER = "server"
+        const val EXTRA_SMART_ACCEL = "smartAccel"
+        const val EXTRA_COMPRESSION = "compression"
+        const val EXTRA_MTU = "mtu"
 
         fun buildStartIntent(
             ctx: Context,
