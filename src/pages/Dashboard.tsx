@@ -181,6 +181,14 @@ export default function Dashboard() {
           <ThroughputRow label={t("dash.down")} value={down.toFixed(1)} color="var(--neon)" />
           <ThroughputRow label={t("dash.up")} value={up.toFixed(1)} color="var(--success)" />
         </div>
+        <div className="mt-2 flex items-center justify-between border-t border-border/60 pt-1.5">
+          <span className="font-mono text-[9px] tracking-widest text-muted-foreground">
+            MTU: {mtu} · DNS: {t("dash.dnsEnc", "ENCRYPTED")}
+          </span>
+          <span className={`font-mono text-[9px] tracking-widest ${smartAccel ? "text-neon" : "text-muted-foreground"}`}>
+            {smartAccel ? "BBR · UDP · MUX" : "AUTO"}
+          </span>
+        </div>
       </div>
 
       <DashboardBandwidthExtra alerts={dashboardAlerts} />
