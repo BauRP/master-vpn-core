@@ -12,7 +12,7 @@ export default function Settings() {
   const { t, lang, setLang } = useI18n();
   const { stealth, setStealth, pqc, setPqc, tlsCamo, setTlsCamo, dpiCycle, setDpiCycle, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
-  const { killSwitch, setKillSwitch, autoProtect, setAutoProtect, networkTrust, protocol, setProtocol, stealthMode, setStealthMode } = useVpn();
+  const { killSwitch, setKillSwitch, autoProtect, setAutoProtect, networkTrust, protocol, setProtocol, stealthMode, setStealthMode, smartAccel, setSmartAccel, compression, setCompression, mtu } = useVpn();
   const lockedTap = (reason: string) => {
     haptic(15);
     openPaywall(reason);
