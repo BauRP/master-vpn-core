@@ -146,6 +146,24 @@ class TrivoVpnService : VpnService() {
             put("dns", JSONArray(dns))
             put("server", serverConfig ?: JSONObject())
             put("stealth", stealth)
+            put("mtu", mtu)
+            // Acceleration hints consumed by the core (Xray / sing-box):
+            //  - transport "udp" forces QUIC/UDP outbounds for VLESS+SS to
+            //    eliminate TCP handshake + retransmit overhead.
+            //  - mux.enabled multiplexes concurrent streams over one conn.
+            //  - congestion "bbr" requests BBR-compatible windows on the
+            //    client side (server runs sysctl tcp_congestion_control=bbr).
+            //  - mss_clamp keeps TCP segments inside MTU for any TCP fallback.
+            put("acceleration", JSONObject().apply {
+                put("transport", if (smartAccel) "udp" else "auto")
+                put("mux", JSONObject().apply {
+                    put("enabled", smartAccel)
+                    put("concurrency", if (smartAccel) 8 else 1)
+                })
+                put("congestion", if (smartAccel) "bbr" else "cubic")
+                put("mss_clamp", mtu - 40)
+                put("compression", compression)
+            })
         }
         val out = File(cacheDir, "trivo-core.json")
         FileOutputStream(out).use { it.write(cfg.toString().toByteArray()) }
