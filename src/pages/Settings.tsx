@@ -215,6 +215,29 @@ export default function Settings() {
         )}
       </Section>
 
+      <Section title={t("set.netAccel", "СЕТЕВОЕ УСКОРЕНИЕ")}>
+        <Toggle
+          label={t("set.smartAccel", "Умное ускорение (BBR/UDP)")}
+          desc={t("set.smartAccelDesc", "Принудительно использует UDP-транспорт, мультиплексирование (mux) и оптимизированные окна перегрузки, совместимые с TCP BBR на сервере.")}
+          value={smartAccel}
+          onChange={tapToggle(setSmartAccel)}
+        />
+        <Toggle
+          label={t("set.compression", "Сжатие трафика")}
+          desc={t("set.compressionDesc", "Снижает потребление трафика на медленных мобильных сетях. Полезно при лимитированных тарифах.")}
+          value={compression}
+          onChange={tapToggle(setCompression)}
+        />
+        <div className="mt-2 flex items-center justify-between rounded-md border border-neon/20 bg-neon/5 px-3 py-2">
+          <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
+            {t("set.netStatus", "TUNING")}
+          </span>
+          <span className="font-mono text-xs text-neon">
+            MTU: {mtu} · DNS: {t("set.dnsEncrypted", "ENCRYPTED")}
+          </span>
+        </div>
+      </Section>
+
       <Section title={t("set.autoConnect")}>
         <Toggle label={t("set.bootConnect")} desc={t("set.bootConnectDesc")} value={autoBoot} onChange={tapToggle(setAutoBoot)} />
         <Toggle
