@@ -182,6 +182,22 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     try { window.localStorage.setItem(AP_KEY, v ? "1" : "0"); } catch {}
   }, []);
 
+  const setSmartAccel = useCallback((v: boolean) => {
+    setSmartAccelState(v);
+    try { window.localStorage.setItem(ACCEL_KEY, v ? "1" : "0"); } catch {}
+    if (isNativeTrivo) {
+      void TrivoVpn.setAcceleration({ smartAccel: v, compression, mtu: MTU_DEFAULT }).catch(() => {});
+    }
+  }, [compression]);
+
+  const setCompression = useCallback((v: boolean) => {
+    setCompressionState(v);
+    try { window.localStorage.setItem(COMPRESS_KEY, v ? "1" : "0"); } catch {}
+    if (isNativeTrivo) {
+      void TrivoVpn.setAcceleration({ smartAccel, compression: v, mtu: MTU_DEFAULT }).catch(() => {});
+    }
+  }, [smartAccel]);
+
   const clearKillSwitchTriggered = useCallback(() => {
     setKillSwitchTriggered(false);
   }, []);
