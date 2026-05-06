@@ -10,9 +10,8 @@ export function MasterVpnLogo({ className = "" }: { className?: string }) {
         </svg>
       </div>
       <div className="font-display font-semibold tracking-tight">
-        <span className="text-foreground">MASTER</span>
+        <span className="text-foreground">TRIVO</span>
         <span className="text-neon text-glow"> VPN</span>
-        <span className="ml-1 rounded border border-neon/30 px-1 py-0.5 font-mono text-[9px] text-neon">SECURE</span>
       </div>
     </Link>
   );
