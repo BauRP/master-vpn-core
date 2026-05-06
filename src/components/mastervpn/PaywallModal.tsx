@@ -18,6 +18,7 @@ const FEATURES_KEYS: { key: string; en: string }[] = [
 export function PaywallModal() {
   const { paywallOpen, closePaywall, setPremium, paywallReason } = usePremium();
   const { t } = useI18n();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
 
   // ESC dismissal — web prototype only
   useEffect(() => {
