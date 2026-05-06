@@ -193,11 +193,3 @@ export function CrownIcon({ className = "h-3 w-3" }: { className?: string }) {
     </svg>
   );
 }
-
-export function CrownIcon({ className = "h-3 w-3" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-      <path d="M5 18h14l1-10-5 3-3-6-3 6-5-3 1 10Z" />
-    </svg>
-  );
-}
