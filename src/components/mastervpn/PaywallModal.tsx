@@ -71,7 +71,7 @@ export function PaywallModal() {
                 <path d="M5 18h14l1-10-5 3-3-6-3 6-5-3 1 10Z" />
               </svg>
             </div>
-            <p className="mt-3 font-mono text-[10px] tracking-[0.3em] text-neon">{t("pay.tag", "// MASTER VPN")}</p>
+            <p className="mt-3 font-mono text-[10px] tracking-[0.3em] text-neon">{t("pay.tag", "// TRIVO VPN")}</p>
             <h2 className="mt-1 font-display text-2xl font-bold text-foreground text-glow">
               {t("pay.title", "Unlock Elite Protection")}
             </h2>
