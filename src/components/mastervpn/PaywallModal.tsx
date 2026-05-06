@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePremium, haptic } from "./PremiumContext";
 import { useI18n } from "@/i18n/I18nProvider";
 
