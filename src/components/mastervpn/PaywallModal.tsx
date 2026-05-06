@@ -100,14 +100,23 @@ export function PaywallModal() {
               price="$0.99"
               sub={t("pay.perMonth", "/ month")}
               compare={t("pay.compareMonth", "Cheaper than a cup of coffee")}
+              highlight={billing === "monthly"}
+              onSelect={() => {
+                haptic(8);
+                setBilling("monthly");
+              }}
             />
             <PriceCard
               label={t("pay.yearly", "Yearly")}
               price="$10.00"
               sub={t("pay.perYear", "/ year · Best Value")}
               compare={t("pay.compareYear", "Less than a single movie ticket")}
-              highlight
+              highlight={billing === "yearly"}
               badge={t("pay.bestValue", "BEST VALUE")}
+              onSelect={() => {
+                haptic(8);
+                setBilling("yearly");
+              }}
             />
           </div>
 
