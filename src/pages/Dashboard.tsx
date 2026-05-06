@@ -69,14 +69,14 @@ export default function Dashboard() {
           }}
         >
           <div className={`absolute inset-3 rounded-full border ${connected ? "border-success/30" : "border-neon/20"}`} />
-          <svg viewBox="0 0 24 24" className={`h-10 w-10 ${connected ? "text-success" : "text-neon"}`} fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg viewBox="0 0 24 24" className={`h-9 w-9 ${connected ? "text-success" : "text-neon"}`} fill="none" stroke="currentColor" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z" />
             {connected && <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />}
           </svg>
-          <p className={`mt-3 font-display text-base font-bold tracking-widest ${connected ? "text-success" : "text-neon"}`}>
+          <p className={`mt-2 font-display text-sm font-bold tracking-[0.2em] ${connected ? "text-success" : "text-neon"}`}>
             {connected ? t("dash.protected") : t("dash.protect")}
           </p>
-          <p className="mt-1 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+          <p className="mt-1 flex max-w-[80%] items-center justify-center gap-1 text-center font-mono text-[9px] leading-tight text-muted-foreground">
             {connected
               ? fmt(elapsed)
               : reconnecting

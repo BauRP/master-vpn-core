@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePremium, haptic } from "./PremiumContext";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -18,6 +18,7 @@ const FEATURES_KEYS: { key: string; en: string }[] = [
 export function PaywallModal() {
   const { paywallOpen, closePaywall, setPremium, paywallReason } = usePremium();
   const { t } = useI18n();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
 
   // ESC dismissal — web prototype only
   useEffect(() => {
@@ -70,7 +71,7 @@ export function PaywallModal() {
                 <path d="M5 18h14l1-10-5 3-3-6-3 6-5-3 1 10Z" />
               </svg>
             </div>
-            <p className="mt-3 font-mono text-[10px] tracking-[0.3em] text-neon">{t("pay.tag", "// MASTER VPN")}</p>
+            <p className="mt-3 font-mono text-[10px] tracking-[0.3em] text-neon">{t("pay.tag", "// TRIVO VPN")}</p>
             <h2 className="mt-1 font-display text-2xl font-bold text-foreground text-glow">
               {t("pay.title", "Unlock Elite Protection")}
             </h2>
@@ -99,14 +100,23 @@ export function PaywallModal() {
               price="$0.99"
               sub={t("pay.perMonth", "/ month")}
               compare={t("pay.compareMonth", "Cheaper than a cup of coffee")}
+              highlight={billing === "monthly"}
+              onSelect={() => {
+                haptic(8);
+                setBilling("monthly");
+              }}
             />
             <PriceCard
               label={t("pay.yearly", "Yearly")}
               price="$10.00"
               sub={t("pay.perYear", "/ year · Best Value")}
               compare={t("pay.compareYear", "Less than a single movie ticket")}
-              highlight
+              highlight={billing === "yearly"}
               badge={t("pay.bestValue", "BEST VALUE")}
+              onSelect={() => {
+                haptic(8);
+                setBilling("yearly");
+              }}
             />
           </div>
 
@@ -141,6 +151,7 @@ function PriceCard({
   compare,
   highlight,
   badge,
+  onSelect,
 }: {
   label: string;
   price: string;
@@ -148,11 +159,14 @@ function PriceCard({
   compare?: string;
   highlight?: boolean;
   badge?: string;
+  onSelect?: () => void;
 }) {
   return (
-    <div
-      className={`relative rounded-xl border p-3 text-center transition ${
-        highlight ? "border-neon bg-neon/10 glow-neon" : "border-border bg-background"
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative rounded-xl border p-3 text-center transition active:scale-[0.98] ${
+        highlight ? "border-neon bg-neon/10 glow-neon" : "border-border bg-background hover:border-neon/40"
       }`}
     >
       {badge && (
@@ -168,7 +182,7 @@ function PriceCard({
           {compare}
         </p>
       )}
-    </div>
+    </button>
   );
 }
 
