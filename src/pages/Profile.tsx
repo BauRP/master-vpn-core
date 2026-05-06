@@ -69,11 +69,16 @@ export default function Profile() {
               {t("prof.basicProtection", "ПРОСТАЯ ЗАЩИТА")}
             </span>
           )}
-          {pqc && (
-            <span className="inline-flex items-center gap-1 border-l border-border bg-success/10 px-2.5 py-1 font-mono text-[10px] font-semibold text-success">
-              ⚛ {t("prof.quantumSafe")}
-            </span>
-          )}
+          <span
+            className={`inline-flex items-center gap-1 border-l border-border px-2.5 py-1 font-mono text-[10px] font-semibold ${
+              pqc
+                ? "bg-success/10 text-success"
+                : "bg-transparent text-muted-foreground opacity-60"
+            }`}
+            aria-disabled={!pqc}
+          >
+            ⚛ {t("prof.quantumSafe")}
+          </span>
         </div>
       </div>
 
