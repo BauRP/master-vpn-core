@@ -151,6 +151,7 @@ function PriceCard({
   compare,
   highlight,
   badge,
+  onSelect,
 }: {
   label: string;
   price: string;
@@ -158,11 +159,14 @@ function PriceCard({
   compare?: string;
   highlight?: boolean;
   badge?: string;
+  onSelect?: () => void;
 }) {
   return (
-    <div
-      className={`relative rounded-xl border p-3 text-center transition ${
-        highlight ? "border-neon bg-neon/10 glow-neon" : "border-border bg-background"
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative rounded-xl border p-3 text-center transition active:scale-[0.98] ${
+        highlight ? "border-neon bg-neon/10 glow-neon" : "border-border bg-background hover:border-neon/40"
       }`}
     >
       {badge && (
@@ -178,7 +182,15 @@ function PriceCard({
           {compare}
         </p>
       )}
-    </div>
+    </button>
+  );
+}
+
+export function CrownIcon({ className = "h-3 w-3" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M5 18h14l1-10-5 3-3-6-3 6-5-3 1 10Z" />
+    </svg>
   );
 }
 
