@@ -73,7 +73,6 @@ export default function AppShell() {
                 {label}
               </span>
             </div>
-            <span className="font-mono text-[10px] text-muted-foreground">{t("app.version")}</span>
           </div>
         </div>
 
