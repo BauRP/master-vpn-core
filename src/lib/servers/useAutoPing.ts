@@ -16,11 +16,15 @@ import { useEffect, useState } from "react";
 import { useServers, type ServerRow } from "./useServers";
 import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
-const LAUNCH_DELAY_MS = 1500;       // let the app settle first
-const REFRESH_INTERVAL_MS = 60_000; // 1 minute — battery-friendly
+// Battery-friendly schedule. The native (Android) WorkManager handles
+// the heavy periodic ping cycle on a 15-minute cadence with Doze + idle
+// constraints; this in-app loop only refreshes while the foreground UI
+// is visible, and pauses entirely when the document is hidden.
+const LAUNCH_DELAY_MS = 1500;        // let the app settle first
+const REFRESH_INTERVAL_MS = 5 * 60_000; // 5 minutes — foreground only
 const PING_TIMEOUT_MS = 2000;
-const MAX_TARGETS = 25;             // cap: do not flood the network
-const PARALLEL = 6;                 // concurrent probes
+const MAX_TARGETS = 25;              // cap: do not flood the network
+const PARALLEL = 6;                  // concurrent probes
 
 type PingMap = Record<string, number | null>;
 
@@ -91,18 +95,24 @@ export function useAutoPing() {
     if (!servers.length) return;
     let stopped = false;
 
-    const launchTimer = setTimeout(() => {
-      if (!stopped) void probeAll(servers);
-    }, LAUNCH_DELAY_MS);
+    // Doze / screen-off awareness. Skip work while the page is hidden;
+    // the native WorkManager scheduler covers the device-asleep case.
+    const tick = () => {
+      if (stopped) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      void probeAll(servers);
+    };
 
-    const interval = setInterval(() => {
-      if (!stopped) void probeAll(servers);
-    }, REFRESH_INTERVAL_MS);
+    const launchTimer = setTimeout(tick, LAUNCH_DELAY_MS);
+    const interval = setInterval(tick, REFRESH_INTERVAL_MS);
+    const onVisible = () => { if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       stopped = true;
       clearTimeout(launchTimer);
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [data]);
 }

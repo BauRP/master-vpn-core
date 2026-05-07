@@ -84,6 +84,15 @@ class TrivoVpnService : VpnService() {
                 mtu = intent.getIntExtra(EXTRA_MTU, mtu).coerceIn(1280, 1500)
                 if (fd != null) restartTunnel()
             }
+            ACTION_NETWORK_CHANGE -> {
+                // Wi-Fi <-> cellular handoff. Re-verify the optimal
+                // server (PingModule cache) and rebuild the tun fd
+                // against the new physical interface — Kill Switch
+                // remains armed, so no traffic leaks during the swap.
+                val transport = intent.getStringExtra(EXTRA_TRANSPORT) ?: "unknown"
+                Log.i("TrivoVpn", "network changed -> $transport, rerouting tunnel")
+                if (fd != null) restartTunnel()
+            }
         }
         return START_STICKY
     }
@@ -363,6 +372,7 @@ class TrivoVpnService : VpnService() {
         const val ACTION_SET_KILLSWITCH = "com.baurp.mastervpn.SET_KILLSWITCH"
         const val ACTION_SET_STEALTH = "com.baurp.mastervpn.SET_STEALTH"
         const val ACTION_SET_ACCELERATION = "com.baurp.mastervpn.SET_ACCEL"
+        const val ACTION_NETWORK_CHANGE = "com.baurp.mastervpn.NETWORK_CHANGE"
 
         const val EXTRA_PROTOCOL = "protocol"
         const val EXTRA_KILLSWITCH = "killSwitch"
@@ -373,6 +383,7 @@ class TrivoVpnService : VpnService() {
         const val EXTRA_SMART_ACCEL = "smartAccel"
         const val EXTRA_COMPRESSION = "compression"
         const val EXTRA_MTU = "mtu"
+        const val EXTRA_TRANSPORT = "transport"
 
         fun buildStartIntent(
             ctx: Context,
