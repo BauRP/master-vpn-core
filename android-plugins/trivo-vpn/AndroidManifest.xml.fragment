@@ -8,6 +8,7 @@
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 <!-- Inside <application> -->
 <service
@@ -22,3 +23,22 @@
         android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
         android:value="vpn" />
 </service>
+
+<!-- Auto-connect on device boot (opt-in via SharedPreferences). -->
+<receiver
+    android:name="com.baurp.mastervpn.tunnel.BootReceiver"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+    </intent-filter>
+</receiver>
+
+<!-- Wi-Fi <-> cellular transition handler (re-verify optimal server). -->
+<receiver
+    android:name="com.baurp.mastervpn.tunnel.ConnectivityReceiver"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+    </intent-filter>
+</receiver>
