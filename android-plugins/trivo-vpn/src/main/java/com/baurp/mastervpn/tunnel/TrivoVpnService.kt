@@ -383,6 +383,7 @@ class TrivoVpnService : VpnService() {
         const val EXTRA_SMART_ACCEL = "smartAccel"
         const val EXTRA_COMPRESSION = "compression"
         const val EXTRA_MTU = "mtu"
+        const val EXTRA_TRANSPORT = "transport"
 
         fun buildStartIntent(
             ctx: Context,
