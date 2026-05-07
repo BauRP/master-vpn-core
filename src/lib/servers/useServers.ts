@@ -1,10 +1,19 @@
 /**
- * useServers — fetches the live server catalog from Lovable Cloud,
- * with rescue-list fallback when the live pool is empty.
+ * useServers — production live node catalog.
  *
- * Returns rows from the `servers` table sorted by latency.
+ * Source of truth: the `servers` table in Lovable Cloud (Postgres). The
+ * Android scraper worker + the `scrape-servers` edge function continuously
+ * upsert real VLESS / Shadowsocks endpoints (host, port, country, latency)
+ * into this table — no mocks, no placeholder JSON.
+ *
+ * This module:
+ *   1. Performs the initial fetch (`supabase.from("servers").select(...)`).
+ *   2. Subscribes to a Postgres realtime channel so the UI updates the
+ *      moment a row is inserted / updated / deleted in the cloud DB
+ *      (functionally equivalent to a Firebase RTDB `onValue` listener).
  */
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ServerRow = {
