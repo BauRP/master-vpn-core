@@ -16,11 +16,15 @@ import { useEffect, useState } from "react";
 import { useServers, type ServerRow } from "./useServers";
 import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
-const LAUNCH_DELAY_MS = 1500;       // let the app settle first
-const REFRESH_INTERVAL_MS = 60_000; // 1 minute — battery-friendly
+// Battery-friendly schedule. The native (Android) WorkManager handles
+// the heavy periodic ping cycle on a 15-minute cadence with Doze + idle
+// constraints; this in-app loop only refreshes while the foreground UI
+// is visible, and pauses entirely when the document is hidden.
+const LAUNCH_DELAY_MS = 1500;        // let the app settle first
+const REFRESH_INTERVAL_MS = 5 * 60_000; // 5 minutes — foreground only
 const PING_TIMEOUT_MS = 2000;
-const MAX_TARGETS = 25;             // cap: do not flood the network
-const PARALLEL = 6;                 // concurrent probes
+const MAX_TARGETS = 25;              // cap: do not flood the network
+const PARALLEL = 6;                  // concurrent probes
 
 type PingMap = Record<string, number | null>;
 
