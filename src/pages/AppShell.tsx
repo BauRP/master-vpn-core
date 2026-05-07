@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKeys } from "@/i18n/translations";
 import { useVpn, formatUptime } from "@/components/mastervpn/VpnContext";
 import { useEngineHealth } from "@/components/mastervpn/vpnEngine";
+import { useAutoPing } from "@/lib/servers/useAutoPing";
 
 const tabs: { to: string; key: keyof TranslationKeys; icon: string }[] = [
   { to: "/app", key: "nav.dashboard", icon: "M3 12 12 3l9 9M5 10v10h14V10" },
@@ -16,6 +17,9 @@ export default function AppShell() {
   const { t } = useI18n();
   const { connected, connecting, reconnecting, elapsed, killSwitchTriggered, clearKillSwitchTriggered } = useVpn();
   const engineHealth = useEngineHealth();
+  // Silent auto-ping on launch — drives the "Optimal (Fastest)" badge
+  // based on the user's geographic latency to each available node.
+  useAutoPing();
   const live = connected || reconnecting;
   const dotTone = reconnecting
     ? "bg-warning"
