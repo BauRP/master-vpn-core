@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useServers, type ServerRow } from "@/lib/servers/useServers";
+import { useAutoPings } from "@/lib/servers/useAutoPing";
 import { useVpn } from "@/components/mastervpn/VpnContext";
 import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
@@ -75,6 +76,7 @@ export function ServerSheet({
   const { t } = useI18n();
   const { data, isLoading, isError } = useServers();
   const { selectedServerId, setSelectedServerId } = useVpn();
+  const autoPings = useAutoPings();
   const [livePings, setLivePings] = useState<Record<string, number | null>>({});
   const aliveRef = useRef(open);
 
@@ -132,21 +134,22 @@ export function ServerSheet({
   const totalCount = data?.servers?.length ?? 0;
 
   // "Optimal (fastest)" — single best-latency node across all regions.
-  // Recomputed every time livePings updates so the badge stays accurate.
+  // Prefers the in-sheet live ping, then the background auto-ping cache,
+  // then the persisted catalog latency. Recomputed on every update.
   const fastest = useMemo<ServerRow | null>(() => {
     const list = data?.servers ?? [];
     if (!list.length) return null;
     let best: ServerRow | null = null;
     let bestMs = Infinity;
     for (const s of list) {
-      const ms = livePings[s.id] ?? s.latency_ms;
+      const ms = livePings[s.id] ?? autoPings[s.id] ?? s.latency_ms;
       if (ms != null && ms < bestMs) {
         bestMs = ms;
         best = s;
       }
     }
     return best;
-  }, [data, livePings]);
+  }, [data, livePings, autoPings]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -214,7 +217,7 @@ export function ServerSheet({
                 </p>
               </div>
               <span className="font-mono text-sm font-semibold text-success">
-                {(livePings[fastest.id] ?? fastest.latency_ms) ?? "—"} ms
+                {(livePings[fastest.id] ?? autoPings[fastest.id] ?? fastest.latency_ms) ?? "—"} ms
               </span>
             </button>
           )}
@@ -232,7 +235,7 @@ export function ServerSheet({
                     <ServerRowItem
                       key={s.id}
                       server={s}
-                      ping={livePings[s.id]}
+                      ping={livePings[s.id] ?? autoPings[s.id]}
                       selected={selectedServerId === s.id}
                       onSelect={() => {
                         // Update target server in the VPN engine and close instantly.
