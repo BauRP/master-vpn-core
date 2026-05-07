@@ -196,6 +196,65 @@ class TrivoVpnService : VpnService() {
                 put("mss_clamp", mtu - 40)
                 put("compression", compression)
             })
+            // Xray/sing-box routing block. Forces all traffic destined for
+            // RFC1918 private ranges + link-local + multicast + loopback +
+            // trusted local domains through the `direct` outbound, fully
+            // bypassing the VPN. Reduces CPU on the tunnel and keeps LAN
+            // services (printers, Chromecast, NAS, router admin UI)
+            // reachable while the tunnel is up.
+            put("routing", JSONObject().apply {
+                put("domainStrategy", "IPIfNonMatch")
+                put("rules", JSONArray().apply {
+                    // Private IPv4 + IPv6 + loopback + link-local → direct.
+                    put(JSONObject().apply {
+                        put("type", "field")
+                        put("outboundTag", "direct")
+                        put("ip", JSONArray().apply {
+                            put("10.0.0.0/8")
+                            put("172.16.0.0/12")
+                            put("192.168.0.0/16")
+                            put("127.0.0.0/8")
+                            put("169.254.0.0/16")
+                            put("224.0.0.0/4")
+                            put("::1/128")
+                            put("fc00::/7")
+                            put("fe80::/10")
+                        })
+                    })
+                    // Trusted local / system domains → direct.
+                    put(JSONObject().apply {
+                        put("type", "field")
+                        put("outboundTag", "direct")
+                        put("domain", JSONArray().apply {
+                            put("geosite:private")
+                            put("domain:local")
+                            put("domain:lan")
+                            put("domain:localhost")
+                            put("domain:home.arpa")
+                            put("domain:in-addr.arpa")
+                            put("domain:ip6.arpa")
+                        })
+                    })
+                    // Default: everything else through the proxy outbound.
+                    put(JSONObject().apply {
+                        put("type", "field")
+                        put("outboundTag", "proxy")
+                        put("network", "tcp,udp")
+                    })
+                })
+            })
+            // Outbound declarations consumed by the core. The `proxy` tag
+            // is bound to the selected server; `direct` and `block` are
+            // stock outbounds used by the routing rules above.
+            put("outbounds", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("tag", "proxy")
+                    put("protocol", protocol)
+                    put("settings", serverConfig ?: JSONObject())
+                })
+                put(JSONObject().apply { put("tag", "direct"); put("protocol", "freedom") })
+                put(JSONObject().apply { put("tag", "block"); put("protocol", "blackhole") })
+            })
         }
         val out = File(cacheDir, "trivo-core.json")
         FileOutputStream(out).use { it.write(cfg.toString().toByteArray()) }
