@@ -43,7 +43,7 @@ class PingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
 
         try {
             val dao = ServersDb.get(applicationContext).servers()
-            val targets = dao.allAlive().take(MAX_TARGETS)
+            val targets = dao.listAlive().take(MAX_TARGETS)
             if (targets.isEmpty()) return@withContext Result.success()
 
             val updated = coroutineScope {
