@@ -60,12 +60,34 @@ async function fetchServers(): Promise<{ servers: ServerRow[]; source: "live" | 
 }
 
 export function useServers() {
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ["servers"],
     queryFn: fetchServers,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
+
+  // Realtime listener — equivalent to Firebase `onValue(ref('nodes'), ...)`.
+  // Any insert/update/delete on `public.servers` triggers a refetch so the
+  // dashboard reflects the live cloud state without manual reload.
+  useEffect(() => {
+    const channel = supabase
+      .channel("servers-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "servers" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["servers"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+  return query;
 }
 
 /** Trigger a fresh scrape on demand (no-await safe). */
