@@ -95,18 +95,24 @@ export function useAutoPing() {
     if (!servers.length) return;
     let stopped = false;
 
-    const launchTimer = setTimeout(() => {
-      if (!stopped) void probeAll(servers);
-    }, LAUNCH_DELAY_MS);
+    // Doze / screen-off awareness. Skip work while the page is hidden;
+    // the native WorkManager scheduler covers the device-asleep case.
+    const tick = () => {
+      if (stopped) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      void probeAll(servers);
+    };
 
-    const interval = setInterval(() => {
-      if (!stopped) void probeAll(servers);
-    }, REFRESH_INTERVAL_MS);
+    const launchTimer = setTimeout(tick, LAUNCH_DELAY_MS);
+    const interval = setInterval(tick, REFRESH_INTERVAL_MS);
+    const onVisible = () => { if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       stopped = true;
       clearTimeout(launchTimer);
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [data]);
 }
