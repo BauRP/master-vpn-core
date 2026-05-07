@@ -98,7 +98,7 @@ export function VpnProvider({ children }: { children: ReactNode }) {
   const [stealthMode, setStealthModeState] = useState<StealthMode>("standard");
   const [selectedServerId, setSelectedServerIdState] = useState<string | null>(null);
   const [smartAccel, setSmartAccelState] = useState(true);
-  const [compression, setCompressionState] = useState(false);
+  const [compression, setCompressionState] = useState(true);
 
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handshake = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -142,7 +142,10 @@ export function VpnProvider({ children }: { children: ReactNode }) {
       const ac = window.localStorage.getItem(ACCEL_KEY);
       const accelOn = ac === null ? true : ac === "1";
       setSmartAccelState(accelOn);
-      const cmp = window.localStorage.getItem(COMPRESS_KEY) === "1";
+      const cmpRaw = window.localStorage.getItem(COMPRESS_KEY);
+      // Default ON — enables core-side compression for VLESS/Reality + SS
+      // tunnels, saving bandwidth on slow mobile links.
+      const cmp = cmpRaw === null ? true : cmpRaw === "1";
       setCompressionState(cmp);
       if (isNativeTrivo) {
         void TrivoVpn.setAcceleration({ smartAccel: accelOn, compression: cmp, mtu: MTU_DEFAULT }).catch(() => {});

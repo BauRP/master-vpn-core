@@ -18,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.InetAddress
 
 /**
  * Native VPN tunnel service.
@@ -99,11 +100,42 @@ class TrivoVpnService : VpnService() {
             .setSession("Trivo VPN")
             // Clamp MTU to 1400 — prevents fragmentation across mobile
             // ISPs that drop oversized packets (PMTUD black-hole).
+            // Combined with mss_clamp = mtu - 40 in the core config this
+            // forces TCP MSS clamping so segments never exceed the tunnel.
             .setMtu(mtu)
             .addAddress("10.10.10.2", 32)
             .addAddress("fd00::2", 128)
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
+
+        // LAN bypass: keep local-network + multicast traffic OFF the VPN.
+        // Reduces CPU load and avoids breaking AirPlay / Chromecast / SMB /
+        // local DNS rebinding. Uses VpnService.Builder.excludeRoute on
+        // Android 13+ (API 33). On older Android the kernel still routes
+        // RFC1918 via the local interface when reachable, so this is a
+        // no-op fallback rather than a hard requirement.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            try {
+                val IpPrefix = Class.forName("android.net.IpPrefix")
+                val ctor = IpPrefix.getConstructor(InetAddress::class.java, Int::class.javaPrimitiveType)
+                val excludeMethod = b.javaClass.getMethod("excludeRoute", IpPrefix)
+                val lanPrefixes = listOf(
+                    "10.0.0.0" to 8,
+                    "172.16.0.0" to 12,
+                    "192.168.0.0" to 16,
+                    "169.254.0.0" to 16,   // link-local
+                    "224.0.0.0" to 4,      // multicast
+                    "255.255.255.255" to 32, // broadcast
+                )
+                for ((addr, prefix) in lanPrefixes) {
+                    val ip = InetAddress.getByName(addr)
+                    val pfx = ctor.newInstance(ip, prefix)
+                    excludeMethod.invoke(b, pfx)
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "LAN bypass excludeRoute unavailable: ${t.message}")
+            }
+        }
 
         dns.forEach { b.addDnsServer(it) }
         disallowedApps.forEach {
