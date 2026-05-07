@@ -84,6 +84,15 @@ class TrivoVpnService : VpnService() {
                 mtu = intent.getIntExtra(EXTRA_MTU, mtu).coerceIn(1280, 1500)
                 if (fd != null) restartTunnel()
             }
+            ACTION_NETWORK_CHANGE -> {
+                // Wi-Fi <-> cellular handoff. Re-verify the optimal
+                // server (PingModule cache) and rebuild the tun fd
+                // against the new physical interface — Kill Switch
+                // remains armed, so no traffic leaks during the swap.
+                val transport = intent.getStringExtra(EXTRA_TRANSPORT) ?: "unknown"
+                Log.i("TrivoVpn", "network changed -> $transport, rerouting tunnel")
+                if (fd != null) restartTunnel()
+            }
         }
         return START_STICKY
     }
