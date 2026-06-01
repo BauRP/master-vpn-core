@@ -47,21 +47,17 @@ export default function Dashboard() {
 
       <div className="mt-6 flex justify-center">
         <button
-          disabled={cooldown || connecting}
+          disabled={cooldown || connecting || isSyncing}
           onClick={() => {
-            // Hard lock: cooldown / in-flight handshake blocks repeated taps
-            // so we never spawn parallel handshakes from tap-spamming.
-            if (cooldown || connecting) return;
+            if (cooldown || connecting || isSyncing) return;
             haptic(15);
-            // Freemium: anyone can start the basic tunnel.
-            // Premium-only layers (PQC, Elite servers) are gated separately in Settings.
             toggle();
           }}
           className={`relative flex h-40 w-40 flex-col items-center justify-center rounded-full border-2 transition-all duration-500 ${
-            cooldown || connecting ? "cursor-not-allowed opacity-80" : ""
+            cooldown || connecting || isSyncing ? "cursor-not-allowed opacity-80" : ""
           } ${
             connected ? "border-success bg-success/10" : "border-neon bg-neon/5 animate-pulse-ring"
-          }`}
+          } ${isSyncing ? "animate-pulse" : ""}`}
           style={{
             boxShadow: connected
               ? "0 0 40px color-mix(in oklab, var(--success) 50%, transparent), inset 0 0 30px color-mix(in oklab, var(--success) 20%, transparent)"
@@ -69,23 +65,31 @@ export default function Dashboard() {
           }}
         >
           <div className={`absolute inset-3 rounded-full border ${connected ? "border-success/30" : "border-neon/20"}`} />
-          <svg viewBox="0 0 24 24" className={`h-9 w-9 ${connected ? "text-success" : "text-neon"}`} fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z" />
-            {connected && <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />}
+          <svg viewBox="0 0 24 24" className={`h-9 w-9 ${connected ? "text-success" : "text-neon"} ${isSyncing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5">
+            {isSyncing ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-3-6.7" />
+            ) : (
+              <>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z" />
+                {connected && <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />}
+              </>
+            )}
           </svg>
           <p className={`mt-2 font-display text-sm font-bold tracking-[0.2em] ${connected ? "text-success" : "text-neon"}`}>
-            {connected ? t("dash.protected") : t("dash.protect")}
+            {isSyncing ? t("dash.syncing", "SYNCING") : connected ? t("dash.protected") : t("dash.protect")}
           </p>
           <p className="mt-1 flex max-w-[80%] items-center justify-center gap-1 text-center font-mono text-[9px] leading-tight text-muted-foreground">
-            {connected
-              ? fmt(elapsed)
-              : reconnecting
-                ? t("dash.reconnecting", "RECONNECTING…")
-                : connecting
-                  ? t("dash.connecting", "HANDSHAKE…")
-                  : isPremium
-                    ? t("dash.tapToConnect")
-                    : t("dash.tapToConnectBasic", "TAP TO CONNECT · BASIC")}
+            {isSyncing
+              ? t("dash.waitSyncing", "WAIT, SYNCING…")
+              : connected
+                ? fmt(elapsed)
+                : reconnecting
+                  ? t("dash.reconnecting", "RECONNECTING…")
+                  : connecting
+                    ? t("dash.connecting", "HANDSHAKE…")
+                    : isPremium
+                      ? t("dash.tapToConnect")
+                      : t("dash.tapToConnectBasic", "TAP TO CONNECT · BASIC")}
           </p>
         </button>
       </div>
