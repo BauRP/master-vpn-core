@@ -72,8 +72,10 @@ export function useServers() {
   // Any insert/update/delete on `public.servers` triggers a refetch so the
   // dashboard reflects the live cloud state without manual reload.
   useEffect(() => {
-    const channel = supabase
-      .channel("servers-live")
+    // Unique channel name per mount avoids "cannot add callbacks after subscribe()"
+    // when React StrictMode double-invokes effects or the hook remounts.
+    const channel = supabase.channel(`servers-live-${Math.random().toString(36).slice(2)}`);
+    channel
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "servers" },
