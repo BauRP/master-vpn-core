@@ -59,21 +59,45 @@ async function fetchServers(): Promise<{ servers: ServerRow[]; source: "live" | 
   return { servers: (rescue ?? []) as ServerRow[], source: "rescue" };
 }
 
+const CACHE_KEY = "trivo:servers:v1";
+
+function readCache(): ServerRow[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as ServerRow[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(rows: ServerRow[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+  } catch {
+    /* quota / private mode — non-fatal */
+  }
+}
+
 export function useServers() {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: ["servers"],
-    queryFn: fetchServers,
+    queryFn: async () => {
+      const result = await fetchServers();
+      writeCache(result.servers);
+      return result;
+    },
+    placeholderData: () => {
+      const cached = readCache();
+      return cached ? { servers: cached, source: "live" as const } : undefined;
+    },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
-  // Realtime listener — equivalent to Firebase `onValue(ref('nodes'), ...)`.
-  // Any insert/update/delete on `public.servers` triggers a refetch so the
-  // dashboard reflects the live cloud state without manual reload.
   useEffect(() => {
-    // Unique channel name per mount avoids "cannot add callbacks after subscribe()"
-    // when React StrictMode double-invokes effects or the hook remounts.
     const channel = supabase.channel(`servers-live-${Math.random().toString(36).slice(2)}`);
     channel
       .on(
@@ -89,7 +113,11 @@ export function useServers() {
     };
   }, [qc]);
 
-  return query;
+  // First-load sync indicator: true only while we have no data at all
+  // (neither network response nor localStorage cache). Drives the
+  // "Wait, Syncing…" state on the Connect button.
+  const isSyncing = query.isPending && !query.data;
+  return Object.assign(query, { isSyncing });
 }
 
 /** Trigger a fresh scrape on demand (no-await safe). */
