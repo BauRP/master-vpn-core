@@ -1,6 +1,9 @@
 package com.baurp.mastervpn
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import com.baurp.mastervpn.ping.PingModule
 import com.baurp.mastervpn.scraper.ScraperWorker
 import com.baurp.mastervpn.tunnel.NetworkListener
@@ -28,6 +31,33 @@ class TrivoVpnPlugin : Plugin() {
     private val ping = PingModule()
     private var networkListener: NetworkListener? = null
 
+    /**
+     * Receives tunnel-state broadcasts from TrivoVpnService and forwards
+     * them to JS as Capacitor events. This is the real data bridge that
+     * replaces the previous setInterval visual simulation in the UI.
+     */
+    private val tunnelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            when (intent?.action) {
+                TrivoVpnService.BROADCAST_HEALTH -> {
+                    val state = intent.getStringExtra("state") ?: "down"
+                    notifyListeners("healthChange", JSObject().put("state", state))
+                    // When the tunnel goes down, surface a null port so the
+                    // Settings screen can show "-" without any guessing.
+                    if (state == "down") {
+                        notifyListeners("portChange", JSObject().put("port", JSObject.NULL))
+                    }
+                }
+                TrivoVpnService.BROADCAST_PORT -> {
+                    val port = intent.getIntExtra("port", -1)
+                    val payload = JSObject()
+                    if (port <= 0) payload.put("port", JSObject.NULL) else payload.put("port", port)
+                    notifyListeners("portChange", payload)
+                }
+            }
+        }
+    }
+
     override fun load() {
         super.load()
         // Start network classification listener — emits to JS via notifyListeners.
@@ -35,10 +65,23 @@ class TrivoVpnPlugin : Plugin() {
             val payload = JSObject().put("trust", trust)
             notifyListeners("networkChange", payload)
         }.also { it.register() }
+
+        // Subscribe to tunnel broadcasts.
+        val filter = IntentFilter().apply {
+            addAction(TrivoVpnService.BROADCAST_HEALTH)
+            addAction(TrivoVpnService.BROADCAST_PORT)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(tunnelReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(tunnelReceiver, filter)
+        }
     }
 
     override fun handleOnDestroy() {
         networkListener?.unregister()
+        try { context.unregisterReceiver(tunnelReceiver) } catch (_: Throwable) {}
         scope.cancel()
         super.handleOnDestroy()
     }

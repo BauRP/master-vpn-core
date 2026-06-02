@@ -11,7 +11,7 @@ import { BatteryOptHint } from "@/components/mastervpn/BatteryOptHint";
 
 export default function Dashboard() {
   const { t } = useI18n();
-  const { stealth, pqc, leakDetected, fallbackPort } = useSecurity();
+  const { stealth, pqc, leakDetected, leakCount, leakScanning, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
   const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId, smartAccel, mtu } = useVpn();
   const { data: serverData, isSyncing } = useServers();
@@ -102,7 +102,7 @@ export default function Dashboard() {
       <div className="mt-3 grid grid-cols-3 gap-2">
         <SecChip
           label={t("dash.stealth")}
-          value={stealth ? `:${fallbackPort}` : "OFF"}
+          value={stealth ? (fallbackPort ? `:${fallbackPort}` : "ARMED") : "OFF"}
           active={stealth && connected}
         />
         <SecChip
@@ -112,11 +112,18 @@ export default function Dashboard() {
         />
         <SecChip
           label={t("dash.leakMon")}
-          value={leakDetected ? t("dash.leakAlert") : t("dash.leakOk")}
-          active={!leakDetected && connected}
+          value={
+            leakDetected
+              ? `${leakCount} / ${t("dash.leakAlert", "LEAK")}`
+              : leakScanning
+                ? t("dash.leakScanning", "SCAN…")
+                : `0 / ${t("dash.leakOk", "NO LEAK")}`
+          }
+          active={!leakDetected && !leakScanning}
           danger={leakDetected}
         />
       </div>
+
 
       {/* Anti-DPI status row — Reality / DNS / Stealth Obfuscation.
           Free tier: collapsed into a single [BASIC PROTECTION] badge per gating spec. */}
@@ -261,20 +268,25 @@ export default function Dashboard() {
 function buildDashboardAlerts(args: {
   leakDetected: boolean;
   reconnecting: boolean;
-  fallbackPort: number;
+  fallbackPort: number | null;
   connected: boolean;
   stealthMode: string;
   isPremium: boolean;
 }): DashboardAlert[] {
   const out: DashboardAlert[] = [];
   if (args.leakDetected) {
-    out.push({ id: "leak", tone: "danger", label: "DNS LEAK DETECTED", value: "BLOCKED" });
+    out.push({ id: "leak", tone: "danger", label: "DNS / WEBRTC LEAK", value: "ALERT" });
   }
   if (args.reconnecting) {
     out.push({ id: "reconnect", tone: "warn", label: "TUNNEL RECONNECTING", value: "HOLD" });
   }
   if (args.connected && args.isPremium && args.stealthMode === "elite") {
-    out.push({ id: "stealth", tone: "info", label: "ELITE OBFUSCATION", value: `:${args.fallbackPort}` });
+    out.push({
+      id: "stealth",
+      tone: "info",
+      label: "ELITE OBFUSCATION",
+      value: args.fallbackPort ? `:${args.fallbackPort}` : "ARMED",
+    });
   }
   return out;
 }

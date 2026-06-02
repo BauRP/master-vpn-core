@@ -93,7 +93,9 @@ export default function Settings() {
         )}
         <div className="mt-2 flex items-center justify-between rounded-md border border-neon/20 bg-neon/5 px-3 py-2">
           <span className="font-mono text-[10px] tracking-widest text-muted-foreground">ACTIVE PORT</span>
-          <span className="font-mono text-xs text-neon">:{fallbackPort}</span>
+          <span className="font-mono text-xs text-neon">
+            {fallbackPort != null ? `:${fallbackPort}` : "-"}
+          </span>
         </div>
       </Section>
 

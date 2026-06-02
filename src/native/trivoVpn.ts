@@ -52,6 +52,12 @@ export interface TrivoVpnPlugin {
     event: "networkChange",
     cb: (e: { trust: NativeNetworkTrust }) => void,
   ): Promise<PluginListenerHandle>;
+  /** Emitted by TrivoVpnService whenever the active outbound port changes
+   *  (initial connect, DPI rotation, disconnect → null). */
+  addListener(
+    event: "portChange",
+    cb: (e: { port: number | null }) => void,
+  ): Promise<PluginListenerHandle>;
 }
 
 /**
