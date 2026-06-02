@@ -14,10 +14,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js (v22 for Capacitor Compatibility)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -34,9 +34,14 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Sync Capacitor with Android
+      - name: Sync or Add Android Platform
         run: |
-          npx cap sync android
+          if [ -d "android" ]; then
+            npx cap sync android
+          else
+            npx cap add android
+            npx cap sync android
+          fi
 
       - name: Build Android Debug APK
         run: |
