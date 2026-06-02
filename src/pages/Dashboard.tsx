@@ -11,7 +11,7 @@ import { BatteryOptHint } from "@/components/mastervpn/BatteryOptHint";
 
 export default function Dashboard() {
   const { t } = useI18n();
-  const { stealth, pqc, leakDetected, fallbackPort } = useSecurity();
+  const { stealth, pqc, leakDetected, leakCount, leakScanning, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
   const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId, smartAccel, mtu } = useVpn();
   const { data: serverData, isSyncing } = useServers();
