@@ -268,20 +268,25 @@ export default function Dashboard() {
 function buildDashboardAlerts(args: {
   leakDetected: boolean;
   reconnecting: boolean;
-  fallbackPort: number;
+  fallbackPort: number | null;
   connected: boolean;
   stealthMode: string;
   isPremium: boolean;
 }): DashboardAlert[] {
   const out: DashboardAlert[] = [];
   if (args.leakDetected) {
-    out.push({ id: "leak", tone: "danger", label: "DNS LEAK DETECTED", value: "BLOCKED" });
+    out.push({ id: "leak", tone: "danger", label: "DNS / WEBRTC LEAK", value: "ALERT" });
   }
   if (args.reconnecting) {
     out.push({ id: "reconnect", tone: "warn", label: "TUNNEL RECONNECTING", value: "HOLD" });
   }
   if (args.connected && args.isPremium && args.stealthMode === "elite") {
-    out.push({ id: "stealth", tone: "info", label: "ELITE OBFUSCATION", value: `:${args.fallbackPort}` });
+    out.push({
+      id: "stealth",
+      tone: "info",
+      label: "ELITE OBFUSCATION",
+      value: args.fallbackPort ? `:${args.fallbackPort}` : "ARMED",
+    });
   }
   return out;
 }
