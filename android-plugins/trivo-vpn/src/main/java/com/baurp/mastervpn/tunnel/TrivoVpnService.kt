@@ -396,7 +396,18 @@ class TrivoVpnService : VpnService() {
     }
 
     private fun broadcastHealth(state: String) {
-        val i = Intent(BROADCAST_HEALTH).apply { putExtra("state", state) }
+        val i = Intent(BROADCAST_HEALTH).apply {
+            setPackage(packageName)
+            putExtra("state", state)
+        }
+        sendBroadcast(i)
+    }
+
+    private fun broadcastPort(port: Int) {
+        val i = Intent(BROADCAST_PORT).apply {
+            setPackage(packageName)
+            putExtra("port", port)
+        }
         sendBroadcast(i)
     }
 
@@ -410,6 +421,13 @@ class TrivoVpnService : VpnService() {
         private const val TAG = "TrivoVpnService"
         private const val TAG_CORE = "TrivoCore"
         const val BROADCAST_HEALTH = "com.baurp.mastervpn.HEALTH"
+        const val BROADCAST_PORT = "com.baurp.mastervpn.PORT"
+
+        // Elite-mode DPI port-cycling pool. Mirrors the front-end list and
+        // is consumed exclusively by the native rotator coroutine — the JS
+        // layer no longer fakes rotation with setInterval.
+        private val DPI_PORTS = intArrayOf(443, 8443, 2053, 2083, 2087, 2096)
+        private const val PORT_ROTATE_INTERVAL_MS = 30_000L
 
         const val ACTION_START = "com.baurp.mastervpn.START"
         const val ACTION_STOP = "com.baurp.mastervpn.STOP"
