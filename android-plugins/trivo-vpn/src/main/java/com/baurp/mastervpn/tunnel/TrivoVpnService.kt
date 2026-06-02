@@ -33,6 +33,7 @@ class TrivoVpnService : VpnService() {
     private var fd: ParcelFileDescriptor? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var engineJob: Job? = null
+    private var portRotatorJob: Job? = null
     private var coreProcess: Process? = null
 
     private var protocol: String = "wireguard"
@@ -51,6 +52,11 @@ class TrivoVpnService : VpnService() {
     private var smartAccel: Boolean = true
     private var compression: Boolean = false
     private var mtu: Int = 1400
+
+    // Active outbound port pushed into the proxy outbound. When Elite
+    // stealth is on, the port rotator cycles through DPI_PORTS every
+    // PORT_ROTATE_INTERVAL_MS and triggers a tunnel restart + broadcast.
+    private var currentPort: Int = 443
 
     private var backoffAttempt = 0
 
