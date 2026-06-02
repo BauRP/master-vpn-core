@@ -155,7 +155,7 @@ export function ServerSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="mx-auto h-[85dvh] max-w-[480px] rounded-t-2xl border-t border-neon/30 bg-background p-0"
+        className="mx-auto h-[85dvh] max-w-[480px] rounded-t-2xl border-t border-neon/30 bg-background p-0 [&>button.absolute]:hidden"
       >
         <SheetHeader className="relative border-b border-border px-5 py-4 text-left">
           <SheetTitle className="font-display text-base font-bold">
