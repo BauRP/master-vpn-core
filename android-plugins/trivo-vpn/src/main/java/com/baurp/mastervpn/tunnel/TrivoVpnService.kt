@@ -165,21 +165,60 @@ class TrivoVpnService : VpnService() {
 
     private fun startTunnel() {
         try { fd?.close() } catch (_: Throwable) {}
+        // Seed currentPort from the selected server config on first start
+        // so we broadcast the truthful initial port (not just "443").
+        serverConfig?.optInt("port", 0)?.takeIf { it > 0 }?.let { currentPort = it }
         fd = buildBuilder().establish()
         engineJob?.cancel()
         engineJob = scope.launch { runEngineLoop() }
+        broadcastPort(currentPort)
+        startPortRotatorIfNeeded()
     }
 
     private fun restartTunnel() = startTunnel()
 
     private fun stopSelfAndTunnel() {
+        portRotatorJob?.cancel()
+        portRotatorJob = null
         engineJob?.cancel()
         engineJob = null
         killCoreProcess()
         try { fd?.close() } catch (_: Throwable) {}
         fd = null
         broadcastHealth("down")
+        broadcastPort(0) // 0 → JS interprets as null / "-"
         stopSelf()
+    }
+
+    /**
+     * DPI port-cycling. Active only in Elite stealth mode. Walks through
+     * DPI_PORTS, rebuilds the proxy outbound on each tick and broadcasts
+     * the new active port so the UI can display the exact integer.
+     *
+     * The rotation is anchored to the engine loop — if the engine stops
+     * (Kill Switch, user disconnect) this coroutine is cancelled too.
+     */
+    private fun startPortRotatorIfNeeded() {
+        portRotatorJob?.cancel()
+        if (stealth != "elite") return
+        portRotatorJob = scope.launch {
+            var idx = DPI_PORTS.indexOf(currentPort).coerceAtLeast(0)
+            while (isActive) {
+                delay(PORT_ROTATE_INTERVAL_MS)
+                if (!isActive) break
+                idx = (idx + 1) % DPI_PORTS.size
+                val next = DPI_PORTS[idx]
+                currentPort = next
+                // Patch the server config in place so generateConfigFile()
+                // picks up the new port on the next core relaunch.
+                serverConfig?.put("port", next)
+                Log.i(TAG, "DPI port rotation -> $next")
+                broadcastPort(next)
+                // Bounce the core with the new outbound port. Kill Switch
+                // remains armed so no plaintext escapes during the swap.
+                killCoreProcess()
+            }
+        }
     }
 
     /**
