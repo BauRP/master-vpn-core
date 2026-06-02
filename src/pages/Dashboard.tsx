@@ -102,7 +102,7 @@ export default function Dashboard() {
       <div className="mt-3 grid grid-cols-3 gap-2">
         <SecChip
           label={t("dash.stealth")}
-          value={stealth ? `:${fallbackPort}` : "OFF"}
+          value={stealth ? (fallbackPort ? `:${fallbackPort}` : "ARMED") : "OFF"}
           active={stealth && connected}
         />
         <SecChip
@@ -112,11 +112,18 @@ export default function Dashboard() {
         />
         <SecChip
           label={t("dash.leakMon")}
-          value={leakDetected ? t("dash.leakAlert") : t("dash.leakOk")}
-          active={!leakDetected && connected}
+          value={
+            leakDetected
+              ? `${leakCount} / ${t("dash.leakAlert", "LEAK")}`
+              : leakScanning
+                ? t("dash.leakScanning", "SCAN…")
+                : `0 / ${t("dash.leakOk", "NO LEAK")}`
+          }
+          active={!leakDetected && !leakScanning}
           danger={leakDetected}
         />
       </div>
+
 
       {/* Anti-DPI status row — Reality / DNS / Stealth Obfuscation.
           Free tier: collapsed into a single [BASIC PROTECTION] badge per gating spec. */}
