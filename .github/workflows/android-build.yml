@@ -28,11 +28,11 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21 (Fixed Java Compiler Mismatch)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Sync or Add Android Platform
         run: |
