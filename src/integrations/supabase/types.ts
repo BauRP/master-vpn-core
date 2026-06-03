@@ -21,15 +21,22 @@ export type Database = {
           country_code: string | null
           country_name: string | null
           created_at: string
+          fingerprint: string | null
           flag: string | null
+          flow: string | null
           host: string
           id: string
           is_alive: boolean
           last_seen: string
           last_validated_at: string | null
           latency_ms: number | null
+          method: string | null
+          password: string | null
           port: number
           protocol: string
+          public_key: string | null
+          short_id: string | null
+          sni: string | null
           source: string
         }
         Insert: {
@@ -38,15 +45,22 @@ export type Database = {
           country_code?: string | null
           country_name?: string | null
           created_at?: string
+          fingerprint?: string | null
           flag?: string | null
+          flow?: string | null
           host: string
           id?: string
           is_alive?: boolean
           last_seen?: string
           last_validated_at?: string | null
           latency_ms?: number | null
+          method?: string | null
+          password?: string | null
           port: number
           protocol: string
+          public_key?: string | null
+          short_id?: string | null
+          sni?: string | null
           source: string
         }
         Update: {
@@ -55,15 +69,22 @@ export type Database = {
           country_code?: string | null
           country_name?: string | null
           created_at?: string
+          fingerprint?: string | null
           flag?: string | null
+          flow?: string | null
           host?: string
           id?: string
           is_alive?: boolean
           last_seen?: string
           last_validated_at?: string | null
           latency_ms?: number | null
+          method?: string | null
+          password?: string | null
           port?: number
           protocol?: string
+          public_key?: string | null
+          short_id?: string | null
+          sni?: string | null
           source?: string
         }
         Relationships: []

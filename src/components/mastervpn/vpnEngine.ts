@@ -29,13 +29,17 @@ export type EngineHealth = "connected" | "degraded" | "down";
 export type NetworkTrust = "trusted" | "untrusted" | "offline";
 
 /**
- * Tunnel protocol exposed to the UI.
- *  - "vless-reality": XTLS-Reality handshake mimicking authorized HTTPS
- *                     (default for Premium / Elite Stealth Mode).
- *  - "shadowsocks":   v2ray-plugin random-noise fallback for statistical DPI.
- *  - "wireguard":     Standard high-perf protocol — no DPI bypass.
+ * Tunnel protocol exposed to the UI. Only DPI-resistant transports plus
+ * a plain WireGuard fallback are surfaced — bare `vless` and legacy
+ * `shadowsocks` are intentionally absent because they are now reliably
+ * blocked by carrier DPI.
+ *  - "vless-reality":      XTLS-Reality handshake mimicking authorized
+ *                          HTTPS (default for Premium / Elite Stealth).
+ *  - "shadowsocks-2022":   SS-2022 (blake3-AES-GCM) — statistical-DPI
+ *                          resistant successor to AEAD Shadowsocks.
+ *  - "wireguard":          Standard high-perf protocol — no DPI bypass.
  */
-export type VpnProtocol = "vless-reality" | "shadowsocks" | "wireguard";
+export type VpnProtocol = "vless-reality" | "shadowsocks-2022" | "wireguard";
 
 /**
  * High-level mode the user picks in the UI.
@@ -317,7 +321,11 @@ void (async () => {
     };
     vpnEngine.setProtocol = (protocol) => {
       original.setProtocol(protocol);
-      void TrivoVpn.setProtocol({ protocol });
+      // Only DPI-bypass transports cross the native bridge; WireGuard is
+      // handled entirely by the OS-level VpnService config.
+      if (protocol === "vless-reality" || protocol === "shadowsocks-2022") {
+        void TrivoVpn.setProtocol({ protocol });
+      }
     };
     vpnEngine.setStealthMode = (mode) => {
       original.setStealthMode(mode);

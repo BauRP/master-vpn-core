@@ -217,7 +217,7 @@ export default function Dashboard() {
                   {selectedServer.city ? ` · ${selectedServer.city}` : ""}
                 </p>
                 <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
-                  {selectedServer.source} · {selectedServer.protocol === "vless" ? "VLESS / Reality" : "Shadowsocks"}
+                  {selectedServer.source} · {selectedServer.protocol === "vless-reality" ? "VLESS / Reality" : "Shadowsocks 2022"}
                 </p>
               </>
             ) : (
