@@ -1,16 +1,26 @@
 /**
- * useAutoPing — silent background latency probe.
+ * useAutoPing — silent, protocol-aware background latency probe.
  *
- * Runs once on app launch (mount) plus on a slow interval (60s) to keep
- * the "Optimal (Fastest)" highlight fresh without burning battery.
+ * The previous implementation pinged proxy ports with a plain HTTPS
+ * `fetch`. VLESS-Reality and Shadowsocks-2022 servers drop those
+ * requests by design, which produced a flood of false-negative `null`
+ * results — making every server look "unreachable" on hostile networks.
  *
- *  - Native: real TCP-connect RTT via the Capacitor plugin (Kotlin
- *    PingModule on Dispatchers.IO).
- *  - Web: HTTPS HEAD with timeout — best-effort, may return null.
+ * The new strategy:
+ *  - On native (Android, Capacitor), the Kotlin `tcpPing` performs a
+ *    protocol-aware handshake — Reality TLS ClientHello (with the
+ *    server's SNI) or SS-2022 salt exchange — instead of a bare TCP
+ *    `connect`. This catches DPI black-holing where the socket is
+ *    accepted but the application handshake is silently dropped.
+ *  - On the web fallback there is no way to forge those handshakes from
+ *    the browser without CORS-violating cross-origin connect, and a
+ *    naked `fetch` is misleading — so we simply return `null` and let
+ *    the server's last server-side `latency_ms` value (from the cloud
+ *    `servers` table) drive the UI.
  *
- * Result is exposed via `useFastestServerId()` and consumed by the
- * dashboard + ServerSheet to render the "Оптимальный (Самый быстрый)"
- * badge based on the user's geographic position (lowest RTT wins).
+ * Runs once shortly after mount, then on a 5-minute foreground cadence.
+ * The heavy 15-minute cycle runs natively in WorkManager with Doze /
+ * idle constraints to stay battery-friendly.
  */
 import { useEffect, useState } from "react";
 import { useServers, type ServerRow } from "./useServers";
@@ -22,7 +32,7 @@ import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 // is visible, and pauses entirely when the document is hidden.
 const LAUNCH_DELAY_MS = 1500;        // let the app settle first
 const REFRESH_INTERVAL_MS = 5 * 60_000; // 5 minutes — foreground only
-const PING_TIMEOUT_MS = 2000;
+const PING_TIMEOUT_MS = 2500;        // Reality handshake is slower than TCP
 const MAX_TARGETS = 25;              // cap: do not flood the network
 const PARALLEL = 6;                  // concurrent probes
 
@@ -46,22 +56,28 @@ function publish(next: PingMap) {
   listeners.forEach((fn) => fn());
 }
 
-async function probeOne(host: string, port: number): Promise<number | null> {
-  if (isNativeTrivo) {
-    try {
-      const { rttMs } = await TrivoVpn.tcpPing({ host, port, timeoutMs: PING_TIMEOUT_MS });
-      return rttMs;
-    } catch {
-      return null;
-    }
+/**
+ * Probe a single server. On native this is a real protocol-level
+ * handshake; on web it is intentionally a no-op (returns `null`) — the
+ * UI falls back to the server-side `latency_ms` recorded in the cloud
+ * `servers` table.
+ */
+async function probeOne(server: ServerRow): Promise<number | null> {
+  if (!isNativeTrivo) {
+    // Web fallback: a plain HTTPS GET against a proxy port produces
+    // misleading null/timeout results, so we deliberately decline to
+    // probe and let the server-side latency drive ordering.
+    return null;
   }
-  const start = performance.now();
   try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), PING_TIMEOUT_MS);
-    await fetch(`https://${host}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal });
-    clearTimeout(timer);
-    return Math.round(performance.now() - start);
+    const { rttMs } = await TrivoVpn.tcpPing({
+      host: server.host,
+      port: server.port,
+      timeoutMs: PING_TIMEOUT_MS,
+      protocol: server.protocol, // protocol-aware handshake on native side
+      sni: server.sni ?? undefined,
+    });
+    return rttMs;
   } catch {
     return null;
   }
@@ -76,7 +92,7 @@ async function probeAll(servers: ServerRow[]) {
     while (i < targets.length) {
       const idx = i++;
       const s = targets[idx];
-      out[s.id] = await probeOne(s.host, s.port);
+      out[s.id] = await probeOne(s);
     }
   }
   await Promise.all(Array.from({ length: PARALLEL }, worker));
