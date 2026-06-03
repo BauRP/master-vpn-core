@@ -35,9 +35,9 @@ export default function Settings() {
       premium: true,
     },
     {
-      id: "shadowsocks",
-      label: "Shadowsocks",
-      sub: "v2ray-plugin · random noise",
+      id: "shadowsocks-2022",
+      label: "Shadowsocks 2022",
+      sub: "blake3-AES-GCM · post-AEAD",
       desc: t("set.protoSsDesc", "Ультимативное решение против самых жёстких блокировок."),
       premium: true,
     },
