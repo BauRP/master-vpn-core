@@ -321,7 +321,11 @@ void (async () => {
     };
     vpnEngine.setProtocol = (protocol) => {
       original.setProtocol(protocol);
-      void TrivoVpn.setProtocol({ protocol });
+      // Only DPI-bypass transports cross the native bridge; WireGuard is
+      // handled entirely by the OS-level VpnService config.
+      if (protocol === "vless-reality" || protocol === "shadowsocks-2022") {
+        void TrivoVpn.setProtocol({ protocol });
+      }
     };
     vpnEngine.setStealthMode = (mode) => {
       original.setStealthMode(mode);
