@@ -336,8 +336,14 @@ export function VpnProvider({ children }: { children: ReactNode }) {
     triggerCooldown();
     setConnecting(true);
     if (isNativeTrivo) {
+      // Native bridge only carries DPI-bypass transports. When the user
+      // is on plain WireGuard the OS-level VpnService config is enough.
+      const nativeProtocol =
+        protocol === "vless-reality" || protocol === "shadowsocks-2022"
+          ? protocol
+          : "vless-reality";
       void TrivoVpn.start({
-        protocol,
+        protocol: nativeProtocol,
         killSwitch,
         dns: DNS_SERVERS,
       }).catch((err) => console.warn("[vpn] native start failed", err));
