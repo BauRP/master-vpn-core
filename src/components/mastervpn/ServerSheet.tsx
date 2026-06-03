@@ -293,7 +293,7 @@ function ServerRowItem({
             )}
           </p>
           <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
-            {server.protocol === "vless" ? "VLESS · Reality" : "Shadowsocks"} · {server.source}
+            {server.protocol === "vless-reality" ? "VLESS · Reality" : "Shadowsocks 2022"} · {server.source}
           </p>
         </div>
         <div className="text-right">
