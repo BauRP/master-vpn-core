@@ -127,8 +127,14 @@ export function VpnProvider({ children }: { children: ReactNode }) {
         setAutoProtectState(v);
         autoProtectRef.current = v;
       }
-      const proto = window.localStorage.getItem(PROTO_KEY) as VpnProtocol | null;
-      if (proto === "vless-reality" || proto === "shadowsocks" || proto === "wireguard") {
+      const protoRaw = window.localStorage.getItem(PROTO_KEY);
+      // Migrate any persisted legacy values (vless, shadowsocks) to their
+      // DPI-resistant successors before restoring.
+      const proto =
+        protoRaw === "vless" ? "vless-reality"
+        : protoRaw === "shadowsocks" ? "shadowsocks-2022"
+        : (protoRaw as VpnProtocol | null);
+      if (proto === "vless-reality" || proto === "shadowsocks-2022" || proto === "wireguard") {
         setProtocolState(proto);
         vpnEngine.setProtocol(proto);
       }
