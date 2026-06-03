@@ -84,7 +84,10 @@ export interface TcpPingResult { rttMs: number | null }
 
 export interface StartOptions {
   protocol: DpiBypassProtocol;
-  server: NativeServer;
+  /** When omitted, the native side picks the lowest-RTT alive server
+   *  from the local Room cache. When present, must carry full
+   *  Reality/SS-2022 material. */
+  server?: NativeServer;
   killSwitch?: boolean;
   /**
    * In-tunnel DNS. If omitted the native side falls back to a hardened
@@ -95,6 +98,11 @@ export interface StartOptions {
   dns?: string[];
   /** Bypass the tunnel for these package names (split tunneling). */
   disallowedApps?: string[];
+}
+
+/** Type guard: only DPI-bypass protocols may be forwarded to native. */
+export function isDpiBypassProtocol(p: string): p is DpiBypassProtocol {
+  return p === "vless-reality" || p === "shadowsocks-2022";
 }
 
 export interface AccelerationOptions {
