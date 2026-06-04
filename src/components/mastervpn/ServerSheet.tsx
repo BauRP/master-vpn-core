@@ -14,6 +14,9 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useServers, type ServerRow } from "@/lib/servers/useServers";
 import { useAutoPings } from "@/lib/servers/useAutoPing";
 import { useVpn } from "@/components/mastervpn/VpnContext";
+import { usePremium } from "@/components/mastervpn/PremiumContext";
+import { useTrial, isFeatureUnlocked } from "@/components/mastervpn/TrialContext";
+import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
 const PING_INTERVAL_MS = 3000;
