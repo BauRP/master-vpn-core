@@ -27,23 +27,25 @@ const App = () => (
       <I18nProvider>
         <SecurityProvider>
           <PremiumProvider>
-            <VpnProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/features" element={<Features />} />
-                  <Route path="/app" element={<AppShell />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="profile" element={<Profile />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-              <PaywallModal />
-            </VpnProvider>
+            <TrialProvider>
+              <VpnProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/features" element={<Features />} />
+                    <Route path="/app" element={<AppShell />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="profile" element={<Profile />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+                <PaywallModal />
+              </VpnProvider>
+            </TrialProvider>
           </PremiumProvider>
         </SecurityProvider>
       </I18nProvider>
