@@ -277,6 +277,7 @@ function ServerRowItem({
   server,
   ping,
   selected,
+  locked,
   onSelect,
 }: {
   server: ServerRow;
