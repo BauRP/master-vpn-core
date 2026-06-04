@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
+import { useTrial } from "@/components/mastervpn/TrialContext";
 import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { ServerSheet } from "@/components/mastervpn/ServerSheet";
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const { t } = useI18n();
   const { stealth, pqc, leakDetected, leakCount, leakScanning, fallbackPort } = useSecurity();
   const { isPremium, openPaywall } = usePremium();
+  const trial = useTrial();
   const { connected, connecting, reconnecting, cooldown, elapsed, down, up, downSeries, upSeries, dnsSecure, dnsServers, protocol, stealthMode, toggle, selectedServerId, smartAccel, mtu } = useVpn();
   const { data: serverData, isSyncing } = useServers();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -155,12 +157,18 @@ export default function Dashboard() {
           aria-label="Unlock Elite Stealth Mode"
         >
           <div className="flex items-center gap-2">
-            <CrownIcon className="h-3 w-3 text-warning" />
-            <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
-              {t("dash.basicProtection", "BASIC PROTECTION · TAP TO UNLOCK ELITE")}
+            <CrownIcon className={`h-3 w-3 ${trial.isTrialActive ? "text-neon" : "text-warning"}`} />
+            <span
+              className={`font-mono text-[10px] tracking-widest ${
+                trial.isTrialActive ? "text-neon" : "text-muted-foreground"
+              }`}
+            >
+              {trial.ready
+                ? trial.trialLabel
+                : t("dash.basicProtection", "BASIC PROTECTION · TAP TO UNLOCK ELITE")}
             </span>
           </div>
-          <span className="font-mono text-[10px] text-warning">⌃</span>
+          <span className={`font-mono text-[10px] ${trial.isTrialActive ? "text-neon" : "text-warning"}`}>⌃</span>
         </button>
       )}
 

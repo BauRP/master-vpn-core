@@ -89,12 +89,40 @@ export type Database = {
         }
         Relationships: []
       }
+      trial_devices: {
+        Row: {
+          created_at: string
+          device_uuid: string
+          last_seen_at: string
+          trial_start_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_uuid: string
+          last_seen_at?: string
+          trial_start_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_uuid?: string
+          last_seen_at?: string
+          trial_start_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      register_trial: {
+        Args: { _device_uuid: string }
+        Returns: {
+          days_remaining: number
+          server_now: string
+          trial_start_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

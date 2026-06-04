@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { SecurityProvider } from "@/components/mastervpn/SecurityContext";
 import { PremiumProvider } from "@/components/mastervpn/PremiumContext";
+import { TrialProvider } from "@/components/mastervpn/TrialContext";
 import { VpnProvider } from "@/components/mastervpn/VpnContext";
 import { PaywallModal } from "@/components/mastervpn/PaywallModal";
 
@@ -26,23 +27,25 @@ const App = () => (
       <I18nProvider>
         <SecurityProvider>
           <PremiumProvider>
-            <VpnProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/features" element={<Features />} />
-                  <Route path="/app" element={<AppShell />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="profile" element={<Profile />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-              <PaywallModal />
-            </VpnProvider>
+            <TrialProvider>
+              <VpnProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/features" element={<Features />} />
+                    <Route path="/app" element={<AppShell />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="profile" element={<Profile />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+                <PaywallModal />
+              </VpnProvider>
+            </TrialProvider>
           </PremiumProvider>
         </SecurityProvider>
       </I18nProvider>

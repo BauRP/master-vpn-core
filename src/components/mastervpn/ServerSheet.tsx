@@ -14,6 +14,9 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useServers, type ServerRow } from "@/lib/servers/useServers";
 import { useAutoPings } from "@/lib/servers/useAutoPing";
 import { useVpn } from "@/components/mastervpn/VpnContext";
+import { usePremium } from "@/components/mastervpn/PremiumContext";
+import { useTrial, isFeatureUnlocked } from "@/components/mastervpn/TrialContext";
+import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { TrivoVpn, isNativeTrivo } from "@/native/trivoVpn";
 
 const PING_INTERVAL_MS = 3000;
@@ -76,9 +79,30 @@ export function ServerSheet({
   const { t } = useI18n();
   const { data, isLoading, isError } = useServers();
   const { selectedServerId, setSelectedServerId } = useVpn();
+  const { isPremium, openPaywall } = usePremium();
+  const trial = useTrial();
+  const unlocked = isFeatureUnlocked(isPremium, trial);
   const autoPings = useAutoPings();
   const [livePings, setLivePings] = useState<Record<string, number | null>>({});
   const aliveRef = useRef(open);
+
+  /**
+   * Crown-gate: when the 7-day trial has expired and the user is not
+   * premium, every premium node is strictly unclickable. Tapping opens
+   * the paywall instead of changing the selected server.
+   */
+  const handleSelect = (id: string) => {
+    if (!unlocked) {
+      openPaywall(
+        trial.tampered
+          ? "Trial locked: system clock tampering detected."
+          : "Free trial expired — upgrade to unlock all servers.",
+      );
+      return;
+    }
+    setSelectedServerId(id);
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     aliveRef.current = open;
@@ -200,10 +224,7 @@ export function ServerSheet({
           {fastest && (
             <button
               type="button"
-              onClick={() => {
-                setSelectedServerId(fastest.id);
-                onOpenChange(false);
-              }}
+              onClick={() => handleSelect(fastest.id)}
               className="mx-5 my-3 flex w-[calc(100%-2.5rem)] items-center gap-3 rounded-lg border border-neon/40 bg-neon/5 px-4 py-3 text-left transition hover:border-neon glow-neon"
             >
               <span className="text-2xl leading-none">{fastest.flag ?? "⚡"}</span>
@@ -216,6 +237,7 @@ export function ServerSheet({
                   {fastest.city ? ` · ${fastest.city}` : ""}
                 </p>
               </div>
+              {!unlocked && <CrownIcon className="h-3.5 w-3.5 text-warning" />}
               <span className="font-mono text-sm font-semibold text-success">
                 {(livePings[fastest.id] ?? autoPings[fastest.id] ?? fastest.latency_ms) ?? "—"} ms
               </span>
@@ -237,11 +259,8 @@ export function ServerSheet({
                       server={s}
                       ping={livePings[s.id] ?? autoPings[s.id]}
                       selected={selectedServerId === s.id}
-                      onSelect={() => {
-                        // Update target server in the VPN engine and close instantly.
-                        setSelectedServerId(s.id);
-                        onOpenChange(false);
-                      }}
+                      locked={!unlocked}
+                      onSelect={() => handleSelect(s.id)}
                     />
                   ))}
                 </ul>
@@ -258,11 +277,13 @@ function ServerRowItem({
   server,
   ping,
   selected,
+  locked,
   onSelect,
 }: {
   server: ServerRow;
   ping: number | null | undefined;
   selected: boolean;
+  locked: boolean;
   onSelect: () => void;
 }) {
   const displayMs = ping ?? server.latency_ms;
@@ -280,7 +301,7 @@ function ServerRowItem({
         onClick={onSelect}
         className={`flex w-full items-center gap-3 px-5 py-3 text-left transition active:bg-card ${
           selected ? "bg-neon/10" : ""
-        }`}
+        } ${locked ? "opacity-70" : ""}`}
       >
         <span className="text-2xl leading-none">{server.flag ?? "🌐"}</span>
         <div className="min-w-0 flex-1">
@@ -296,6 +317,7 @@ function ServerRowItem({
             {server.protocol === "vless-reality" ? "VLESS · Reality" : "Shadowsocks 2022"} · {server.source}
           </p>
         </div>
+        {locked && <CrownIcon className="h-3.5 w-3.5 text-warning" />}
         <div className="text-right">
           <p className={`font-mono text-sm font-semibold ${tone}`}>
             {displayMs != null ? `${displayMs} ms` : "—"}
