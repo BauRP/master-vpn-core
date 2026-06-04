@@ -79,9 +79,30 @@ export function ServerSheet({
   const { t } = useI18n();
   const { data, isLoading, isError } = useServers();
   const { selectedServerId, setSelectedServerId } = useVpn();
+  const { isPremium, openPaywall } = usePremium();
+  const trial = useTrial();
+  const unlocked = isFeatureUnlocked(isPremium, trial);
   const autoPings = useAutoPings();
   const [livePings, setLivePings] = useState<Record<string, number | null>>({});
   const aliveRef = useRef(open);
+
+  /**
+   * Crown-gate: when the 7-day trial has expired and the user is not
+   * premium, every premium node is strictly unclickable. Tapping opens
+   * the paywall instead of changing the selected server.
+   */
+  const handleSelect = (id: string) => {
+    if (!unlocked) {
+      openPaywall(
+        trial.tampered
+          ? "Trial locked: system clock tampering detected."
+          : "Free trial expired — upgrade to unlock all servers.",
+      );
+      return;
+    }
+    setSelectedServerId(id);
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     aliveRef.current = open;
