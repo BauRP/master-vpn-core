@@ -224,10 +224,7 @@ export function ServerSheet({
           {fastest && (
             <button
               type="button"
-              onClick={() => {
-                setSelectedServerId(fastest.id);
-                onOpenChange(false);
-              }}
+              onClick={() => handleSelect(fastest.id)}
               className="mx-5 my-3 flex w-[calc(100%-2.5rem)] items-center gap-3 rounded-lg border border-neon/40 bg-neon/5 px-4 py-3 text-left transition hover:border-neon glow-neon"
             >
               <span className="text-2xl leading-none">{fastest.flag ?? "⚡"}</span>
@@ -240,6 +237,7 @@ export function ServerSheet({
                   {fastest.city ? ` · ${fastest.city}` : ""}
                 </p>
               </div>
+              {!unlocked && <CrownIcon className="h-3.5 w-3.5 text-warning" />}
               <span className="font-mono text-sm font-semibold text-success">
                 {(livePings[fastest.id] ?? autoPings[fastest.id] ?? fastest.latency_ms) ?? "—"} ms
               </span>
@@ -261,11 +259,8 @@ export function ServerSheet({
                       server={s}
                       ping={livePings[s.id] ?? autoPings[s.id]}
                       selected={selectedServerId === s.id}
-                      onSelect={() => {
-                        // Update target server in the VPN engine and close instantly.
-                        setSelectedServerId(s.id);
-                        onOpenChange(false);
-                      }}
+                      locked={!unlocked}
+                      onSelect={() => handleSelect(s.id)}
                     />
                   ))}
                 </ul>
