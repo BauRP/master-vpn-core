@@ -157,12 +157,18 @@ export default function Dashboard() {
           aria-label="Unlock Elite Stealth Mode"
         >
           <div className="flex items-center gap-2">
-            <CrownIcon className="h-3 w-3 text-warning" />
-            <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
-              {t("dash.basicProtection", "BASIC PROTECTION · TAP TO UNLOCK ELITE")}
+            <CrownIcon className={`h-3 w-3 ${trial.isTrialActive ? "text-neon" : "text-warning"}`} />
+            <span
+              className={`font-mono text-[10px] tracking-widest ${
+                trial.isTrialActive ? "text-neon" : "text-muted-foreground"
+              }`}
+            >
+              {trial.ready
+                ? trial.trialLabel
+                : t("dash.basicProtection", "BASIC PROTECTION · TAP TO UNLOCK ELITE")}
             </span>
           </div>
-          <span className="font-mono text-[10px] text-warning">⌃</span>
+          <span className={`font-mono text-[10px] ${trial.isTrialActive ? "text-neon" : "text-warning"}`}>⌃</span>
         </button>
       )}
 
