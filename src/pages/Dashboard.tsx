@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSecurity } from "@/components/mastervpn/SecurityContext";
 import { usePremium, haptic } from "@/components/mastervpn/PremiumContext";
+import { useTrial } from "@/components/mastervpn/TrialContext";
 import { useVpn } from "@/components/mastervpn/VpnContext";
 import { CrownIcon } from "@/components/mastervpn/PaywallModal";
 import { ServerSheet } from "@/components/mastervpn/ServerSheet";
