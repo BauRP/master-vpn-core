@@ -282,6 +282,7 @@ function ServerRowItem({
   server: ServerRow;
   ping: number | null | undefined;
   selected: boolean;
+  locked: boolean;
   onSelect: () => void;
 }) {
   const displayMs = ping ?? server.latency_ms;
@@ -299,7 +300,7 @@ function ServerRowItem({
         onClick={onSelect}
         className={`flex w-full items-center gap-3 px-5 py-3 text-left transition active:bg-card ${
           selected ? "bg-neon/10" : ""
-        }`}
+        } ${locked ? "opacity-70" : ""}`}
       >
         <span className="text-2xl leading-none">{server.flag ?? "🌐"}</span>
         <div className="min-w-0 flex-1">
@@ -315,6 +316,7 @@ function ServerRowItem({
             {server.protocol === "vless-reality" ? "VLESS · Reality" : "Shadowsocks 2022"} · {server.source}
           </p>
         </div>
+        {locked && <CrownIcon className="h-3.5 w-3.5 text-warning" />}
         <div className="text-right">
           <p className={`font-mono text-sm font-semibold ${tone}`}>
             {displayMs != null ? `${displayMs} ms` : "—"}
