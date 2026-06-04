@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { SecurityProvider } from "@/components/mastervpn/SecurityContext";
 import { PremiumProvider } from "@/components/mastervpn/PremiumContext";
+import { TrialProvider } from "@/components/mastervpn/TrialContext";
 import { VpnProvider } from "@/components/mastervpn/VpnContext";
 import { PaywallModal } from "@/components/mastervpn/PaywallModal";
 
