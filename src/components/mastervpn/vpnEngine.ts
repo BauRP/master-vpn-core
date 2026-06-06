@@ -89,8 +89,19 @@ export type VpnEngine = {
   subscribe: (handlers: VpnEngineHandlers) => () => void;
   /** Subscribe to health state changes. Returns an unsubscribe fn. */
   subscribeHealth: (cb: (h: EngineHealth) => void) => () => void;
+  /** Subscribe to tunnel error codes from the native VpnService. `null`
+   *  is emitted when the engine recovers and the error is cleared. */
+  subscribeTunnelError: (cb: (code: string | null) => void) => () => void;
+  /** Last hard tunnel-layer error reported by native (or `null`). */
+  getLastTunnelError: () => string | null;
+  /** Force health to a specific state, bypassing the probe debounce.
+   *  Used by the native bridge to mirror authoritative VpnService events. */
+  forceHealth: (next: EngineHealth) => void;
+  /** Surface a hard tunnel error from native and immediately flip to "down". */
+  reportTunnelError: (code: string) => void;
   /** Read current health synchronously (for SSR / first paint). */
   getHealth: () => EngineHealth;
+
   /** Start the health-check loop. Called by VpnContext on mount. */
   start: () => void;
   /** Stop the health-check loop. Called by VpnContext on unmount. */
@@ -166,9 +177,11 @@ function createEngine(probe: Probe): VpnEngine {
   let timer: ReturnType<typeof setInterval> | null = null;
   let inFlight: AbortController | null = null;
   let started = false;
+  let lastTunnelError: string | null = null;
 
   const handlers = new Set<VpnEngineHandlers>();
   const healthSubs = new Set<(h: EngineHealth) => void>();
+  const errorSubs = new Set<(code: string | null) => void>();
 
   const setHealth = (next: EngineHealth) => {
     if (next === health) return;
@@ -181,12 +194,14 @@ function createEngine(probe: Probe): VpnEngine {
     if (next === "down" && prev !== "down") {
       handlers.forEach((h) => h.onDisconnect());
     } else if (prev === "down" && next === "connected") {
+      // Recovery clears any sticky tunnel error.
+      lastTunnelError = null;
+      errorSubs.forEach((cb) => cb(null));
       handlers.forEach((h) => h.onReconnect());
     }
   };
 
   const runProbe = async () => {
-    // Cancel any probe still in flight from the previous tick.
     if (inFlight) inFlight.abort();
     const ctl = new AbortController();
     inFlight = ctl;
@@ -205,7 +220,6 @@ function createEngine(probe: Probe): VpnEngine {
     if (ok) {
       consecutiveFails = 0;
       consecutiveOks += 1;
-      // Recovery only flips back to connected after RECOVERY_THRESHOLD.
       if (health !== "connected" && consecutiveOks >= RECOVERY_THRESHOLD) {
         setHealth("connected");
       }
@@ -215,8 +229,6 @@ function createEngine(probe: Probe): VpnEngine {
       if (consecutiveFails >= FAIL_THRESHOLD) {
         setHealth("down");
       } else if (health === "connected") {
-        // First failure: surface "degraded" so the UI can warn the user
-        // without triggering reconnect. Transient latency stays here.
         setHealth("degraded");
       }
     }
@@ -225,72 +237,60 @@ function createEngine(probe: Probe): VpnEngine {
   return {
     subscribe(h) {
       handlers.add(h);
-      return () => {
-        handlers.delete(h);
-      };
+      return () => { handlers.delete(h); };
     },
     subscribeHealth(cb) {
       healthSubs.add(cb);
-      return () => {
-        healthSubs.delete(cb);
-      };
+      return () => { healthSubs.delete(cb); };
     },
-    getHealth() {
-      return health;
+    subscribeTunnelError(cb) {
+      errorSubs.add(cb);
+      return () => { errorSubs.delete(cb); };
+    },
+    getHealth() { return health; },
+    getLastTunnelError() { return lastTunnelError; },
+    /**
+     * Force the engine into a specific health state, bypassing the probe
+     * debounce. Used by the native bridge to mirror authoritative health
+     * events from the Android VpnService (which knows the truth about the
+     * tun fd and core process), and by `reportTunnelError`.
+     */
+    forceHealth(next) {
+      // Reset probe counters so the next probe round starts clean.
+      consecutiveFails = 0;
+      consecutiveOks = 0;
+      setHealth(next);
+    },
+    reportTunnelError(code) {
+      lastTunnelError = code;
+      errorSubs.forEach((cb) => cb(code));
+      // An error always implies the user is no longer protected — flip
+      // hard down regardless of what the probe last said.
+      consecutiveFails = FAIL_THRESHOLD;
+      setHealth("down");
     },
     start() {
       if (started) return;
       started = true;
-      // Kick off immediately so the first reading is fresh, then poll.
       void runProbe();
       timer = setInterval(runProbe, PROBE_INTERVAL_MS);
     },
     stop() {
       started = false;
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-      if (inFlight) {
-        inFlight.abort();
-        inFlight = null;
-      }
+      if (timer) { clearInterval(timer); timer = null; }
+      if (inFlight) { inFlight.abort(); inFlight = null; }
     },
-    /* ---------- Native contract — mock no-ops ----------
-     * In the web prototype these only log so the integration surface
-     * is visible during development. The real Android engine wires
-     * each call into VpnService.Builder / ConnectivityManager.
-     */
-    setKillSwitch(on) {
-      if (typeof console !== "undefined") {
-        console.debug("[vpnEngine] setKillSwitch", on);
-      }
-    },
-    setDisallowedApps(packages) {
-      if (typeof console !== "undefined") {
-        console.debug("[vpnEngine] setDisallowedApps", packages);
-      }
-    },
-    setDnsServers(servers) {
-      if (typeof console !== "undefined") {
-        console.debug("[vpnEngine] setDnsServers", servers);
-      }
-    },
-    setProtocol(protocol) {
-      if (typeof console !== "undefined") {
-        console.debug("[vpnEngine] setProtocol", protocol);
-      }
-    },
-    setStealthMode(mode) {
-      if (typeof console !== "undefined") {
-        console.debug("[vpnEngine] setStealthMode", mode);
-      }
-    },
+    setKillSwitch(on) { console.debug("[vpnEngine] setKillSwitch", on); },
+    setDisallowedApps(packages) { console.debug("[vpnEngine] setDisallowedApps", packages); },
+    setDnsServers(servers) { console.debug("[vpnEngine] setDnsServers", servers); },
+    setProtocol(protocol) { console.debug("[vpnEngine] setProtocol", protocol); },
+    setStealthMode(mode) { console.debug("[vpnEngine] setStealthMode", mode); },
     simulateNetworkChange(trust) {
       handlers.forEach((h) => h.onNetworkChange?.(trust));
     },
   };
 }
+
 
 /**
  * Active engine used by VpnContext. On native Android the engine is wired
@@ -332,17 +332,20 @@ void (async () => {
       void TrivoVpn.setStealthMode({ mode });
     };
 
-    // Health events from the native engine drive disconnect/reconnect.
+    // Health events from the native engine are authoritative — the
+    // VpnService knows the real state of the tun fd and core process.
+    // Mirror them directly into the engine, bypassing the probe debounce.
     await TrivoVpn.addListener("healthChange", ({ state }) => {
-      // Replay the event into the existing health state machine by
-      // synthesising a probe outcome — keeps debounce semantics intact.
-      // Drop = forced disconnect; connected = forced recover.
-      if (state === "down") {
-        // Force the engine into "down" immediately on hard tunnel drop.
-        // Mirror the internal transition: emit onDisconnect once.
-        vpnEngine.simulateNetworkChange("offline");
-      }
+      vpnEngine.forceHealth(state);
     });
+
+    // Hard tunnel errors (TUN_BIND_FAILED, CORE_READY_TIMEOUT,
+    // PRIVATE_DNS_ACTIVE, …) propagate as a sticky error + forced "down".
+    await TrivoVpn.addListener("tunnelError", ({ code }) => {
+      console.warn("[vpnEngine] native tunnel error:", code);
+      vpnEngine.reportTunnelError(code);
+    });
+
 
     // Network classification flows straight through to subscribers.
     await TrivoVpn.addListener("networkChange", ({ trust }) => {
@@ -367,3 +370,13 @@ export function useEngineHealth(): EngineHealth {
     () => vpnEngine.getHealth(),
   );
 }
+
+/** Live last tunnel error from the native VpnService, or `null`. */
+export function useTunnelError(): string | null {
+  return useSyncExternalStore(
+    (cb) => vpnEngine.subscribeTunnelError(cb),
+    () => vpnEngine.getLastTunnelError(),
+    () => vpnEngine.getLastTunnelError(),
+  );
+}
+

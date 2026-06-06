@@ -140,7 +140,22 @@ export interface TrivoVpnPlugin {
     event: "portChange",
     cb: (e: { port: number | null }) => void,
   ): Promise<PluginListenerHandle>;
+  /**
+   * Hard tunnel-layer error fired by the native VpnService when the core
+   * fails to bind to the tun fd, the readiness watchdog expires, or system
+   * Private DNS is detected (DoT bypasses the VpnService on Android Q+).
+   * Codes: `TUN_BIND_FAILED`, `TUN_FD_LOST`, `CORE_TUN_BIND_FAILED:<line>`,
+   * `CORE_READY_TIMEOUT`, `CORE_EXEC_FAILED:<msg>`, `CORE_BINARY_MISSING`,
+   * `CONFIG_GEN_FAILED:<msg>`, `PRIVATE_DNS_ACTIVE`.
+   */
+  addListener(
+    event: "tunnelError",
+    cb: (e: { code: string }) => void,
+  ): Promise<PluginListenerHandle>;
 }
+
+
+
 
 /** Hardened defaults: Cloudflare + Google DoH-compatible resolvers that
  *  the native sing-box outbound routes inside the tunnel. */

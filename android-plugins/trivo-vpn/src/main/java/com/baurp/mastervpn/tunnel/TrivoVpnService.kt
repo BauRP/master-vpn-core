@@ -120,6 +120,9 @@ class TrivoVpnService : VpnService() {
             .setMtu(mtu)
             .addAddress("10.10.10.2", 32)
             .addAddress("fd00::2", 128)
+            // Full IPv4 + IPv6 default route. The IPv6 route is mandatory:
+            // without it dual-stack devices leak source IP via WebRTC and
+            // every IPv6 DNS / TCP flow bypasses the tunnel.
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
 
@@ -152,7 +155,31 @@ class TrivoVpnService : VpnService() {
             }
         }
 
+        // Strict DNS binding. Install the encrypted resolvers as the ONLY
+        // resolvers on the tun interface. Combined with the 0.0.0.0/0 +
+        // ::/0 default routes above, every UDP/TCP packet to port 53 is
+        // forced through the tun fd — no fallback to the carrier's DNS.
         dns.forEach { b.addDnsServer(it) }
+        // Pin the DNS sentinels behind explicit /32 + /128 host routes so
+        // even apps that hardcode 1.1.1.1 / 8.8.8.8 (bypassing the system
+        // resolver) still ride the tunnel.
+        dns.forEach { addr ->
+            try {
+                val ip = InetAddress.getByName(addr)
+                val prefix = if (ip.address.size == 4) 32 else 128
+                b.addRoute(ip, prefix)
+            } catch (_: Throwable) {}
+        }
+
+        // System "Private DNS" (DoT on port 853) fires from a network
+        // process outside our VpnService on Android Q+, so we cannot
+        // intercept it at the VpnService layer. The only honest defence is
+        // to surface this to the UI so the user disables it.
+        if (isPrivateDnsActive()) {
+            Log.w(TAG, "Private DNS is enabled — DoT bypasses the tunnel")
+            broadcastTunError("PRIVATE_DNS_ACTIVE")
+        }
+
         disallowedApps.forEach {
             try { b.addDisallowedApplication(it) } catch (_: Throwable) {}
         }
@@ -163,17 +190,38 @@ class TrivoVpnService : VpnService() {
         return b
     }
 
+    private fun isPrivateDnsActive(): Boolean = try {
+        val mode = android.provider.Settings.Global.getString(
+            contentResolver, "private_dns_mode"
+        )
+        mode != null && mode != "off"
+    } catch (_: Throwable) { false }
+
     private fun startTunnel() {
         try { fd?.close() } catch (_: Throwable) {}
         // Seed currentPort from the selected server config on first start
         // so we broadcast the truthful initial port (not just "443").
         serverConfig?.optInt("port", 0)?.takeIf { it > 0 }?.let { currentPort = it }
-        fd = buildBuilder().establish()
+        fd = try {
+            buildBuilder().establish()
+        } catch (t: Throwable) {
+            Log.e(TAG, "VpnService.establish() threw", t)
+            null
+        }
+        if (fd == null) {
+            // The OS refused to grant the tun fd (missing consent, conflicting
+            // VPN, OEM restriction). Without it nothing else can succeed.
+            Log.e(TAG, "tun fd unavailable — tunnel cannot start")
+            broadcastTunError("TUN_BIND_FAILED")
+            broadcastHealth("down")
+            return
+        }
         engineJob?.cancel()
         engineJob = scope.launch { runEngineLoop() }
         broadcastPort(currentPort)
         startPortRotatorIfNeeded()
     }
+
 
     private fun restartTunnel() = startTunnel()
 
@@ -336,20 +384,30 @@ class TrivoVpnService : VpnService() {
      *    reconnect. On clean stop the loop exits silently.
      */
     private suspend fun runEngineLoop() = withContext(Dispatchers.IO) {
-        broadcastHealth("connected")
+        // Start in "degraded" until the core proves it actually bound to
+        // the tun fd. We refuse to claim "connected" purely because the
+        // service started — that was the desync that made the UI show
+        // ENGINE-CONNECTED while traffic still leaked.
+        broadcastHealth("degraded")
         while (isActive) {
             val config = try { generateConfigFile() } catch (t: Throwable) {
-                Log.e(TAG, "config gen failed", t); break
+                Log.e(TAG, "config gen failed", t)
+                broadcastTunError("CONFIG_GEN_FAILED:${t.message}")
+                break
             }
             val bin = coreBinary()
             if (!bin.exists()) {
                 Log.w(TAG, "core binary missing at ${bin.absolutePath} — Kill Switch holding traffic")
+                broadcastTunError("CORE_BINARY_MISSING")
                 broadcastHealth("down")
                 if (!killSwitch) break
                 delay(backoffDelay()); continue
             }
             val tunFd = fd?.fd ?: run {
-                Log.e(TAG, "tun fd unavailable"); break
+                Log.e(TAG, "tun fd unavailable")
+                broadcastTunError("TUN_FD_LOST")
+                broadcastHealth("down")
+                break
             }
             val pb = ProcessBuilder(
                 bin.absolutePath,
@@ -358,21 +416,59 @@ class TrivoVpnService : VpnService() {
             ).redirectErrorStream(true)
 
             val proc = try { pb.start() } catch (t: Throwable) {
-                Log.e(TAG, "core exec failed", t); broadcastHealth("down")
+                Log.e(TAG, "core exec failed", t)
+                broadcastTunError("CORE_EXEC_FAILED:${t.message}")
+                broadcastHealth("down")
                 if (!killSwitch) break
                 delay(backoffDelay()); continue
             }
             coreProcess = proc
 
-            // Pipe stdout/stderr to logcat on a side coroutine so the loop
-            // can await exit without buffering deadlocks.
-            launch {
+            // Watch stdout for the readiness marker. The core MUST print a
+            // single line `ready tunfd=<N>` once it has successfully dup'd
+            // the tun fd and started forwarding. Until we see that marker
+            // the engine stays "degraded". If a known bind-error string
+            // appears we propagate it to JS as a hard tunnel error.
+            val readyJob = launch {
                 proc.inputStream.bufferedReader().useLines { lines ->
-                    lines.forEach { Log.d(TAG_CORE, it) }
+                    var bound = false
+                    for (line in lines) {
+                        Log.d(TAG_CORE, line)
+                        if (!bound && (line.contains("ready tunfd=") ||
+                                       line.contains("tunnel bound") ||
+                                       line.startsWith("READY"))) {
+                            bound = true
+                            backoffAttempt = 0
+                            broadcastHealth("connected")
+                        }
+                        if (line.contains("bind: permission denied") ||
+                            line.contains("tun: invalid fd") ||
+                            line.contains("EBADF") ||
+                            line.contains("operation not permitted")) {
+                            broadcastTunError("CORE_TUN_BIND_FAILED:$line")
+                            broadcastHealth("down")
+                        }
+                    }
+                }
+            }
+
+            // Independent watchdog — if the core never reports readiness
+            // within READY_TIMEOUT_MS, kill it and let the outer loop
+            // perform an exponential-backoff reconnect. Prevents the
+            // "service alive but tunnel silently broken" desync.
+            val watchdog = launch {
+                delay(READY_TIMEOUT_MS)
+                if (isActive && proc.isAlive && lastHealth != "connected") {
+                    Log.e(TAG, "core readiness timeout — killing and retrying")
+                    broadcastTunError("CORE_READY_TIMEOUT")
+                    broadcastHealth("down")
+                    try { proc.destroy() } catch (_: Throwable) {}
                 }
             }
 
             val exit = try { proc.waitFor() } catch (_: InterruptedException) { -1 }
+            watchdog.cancel()
+            readyJob.cancel()
             coreProcess = null
             if (!isActive) break
             Log.w(TAG, "core exited code=$exit — Kill Switch active, scheduling reconnect")
@@ -380,9 +476,10 @@ class TrivoVpnService : VpnService() {
             if (!killSwitch) break
             backoffAttempt += 1
             delay(backoffDelay())
-            broadcastHealth("connected")
+            broadcastHealth("degraded")
         }
     }
+
 
     private fun backoffDelay(): Long {
         val base = 800L
@@ -395,7 +492,10 @@ class TrivoVpnService : VpnService() {
         coreProcess = null
     }
 
+    @Volatile private var lastHealth: String = "down"
+
     private fun broadcastHealth(state: String) {
+        lastHealth = state
         val i = Intent(BROADCAST_HEALTH).apply {
             setPackage(packageName)
             putExtra("state", state)
@@ -411,6 +511,20 @@ class TrivoVpnService : VpnService() {
         sendBroadcast(i)
     }
 
+    /**
+     * Surface a hard tunnel error to the plugin layer, which forwards it to
+     * JS as a `tunnelError` event. The JS engine treats any error as a hard
+     * "down" transition regardless of what health says.
+     */
+    private fun broadcastTunError(code: String) {
+        val i = Intent(BROADCAST_TUN_ERROR).apply {
+            setPackage(packageName)
+            putExtra("code", code)
+        }
+        sendBroadcast(i)
+    }
+
+
     override fun onDestroy() {
         scope.cancel()
         killCoreProcess()
@@ -422,6 +536,13 @@ class TrivoVpnService : VpnService() {
         private const val TAG_CORE = "TrivoCore"
         const val BROADCAST_HEALTH = "com.baurp.mastervpn.HEALTH"
         const val BROADCAST_PORT = "com.baurp.mastervpn.PORT"
+        const val BROADCAST_TUN_ERROR = "com.baurp.mastervpn.TUN_ERROR"
+
+        /** Max time the core has to print its readiness marker before we
+         *  consider the tun binding broken and force a reconnect. */
+        private const val READY_TIMEOUT_MS = 8_000L
+
+
 
         // Elite-mode DPI port-cycling pool. Mirrors the front-end list and
         // is consumed exclusively by the native rotator coroutine — the JS
