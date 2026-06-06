@@ -120,6 +120,9 @@ class TrivoVpnService : VpnService() {
             .setMtu(mtu)
             .addAddress("10.10.10.2", 32)
             .addAddress("fd00::2", 128)
+            // Full IPv4 + IPv6 default route. The IPv6 route is mandatory:
+            // without it dual-stack devices leak source IP via WebRTC and
+            // every IPv6 DNS / TCP flow bypasses the tunnel.
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
 
@@ -152,7 +155,31 @@ class TrivoVpnService : VpnService() {
             }
         }
 
+        // Strict DNS binding. Install the encrypted resolvers as the ONLY
+        // resolvers on the tun interface. Combined with the 0.0.0.0/0 +
+        // ::/0 default routes above, every UDP/TCP packet to port 53 is
+        // forced through the tun fd — no fallback to the carrier's DNS.
         dns.forEach { b.addDnsServer(it) }
+        // Pin the DNS sentinels behind explicit /32 + /128 host routes so
+        // even apps that hardcode 1.1.1.1 / 8.8.8.8 (bypassing the system
+        // resolver) still ride the tunnel.
+        dns.forEach { addr ->
+            try {
+                val ip = InetAddress.getByName(addr)
+                val prefix = if (ip.address.size == 4) 32 else 128
+                b.addRoute(ip, prefix)
+            } catch (_: Throwable) {}
+        }
+
+        // System "Private DNS" (DoT on port 853) fires from a network
+        // process outside our VpnService on Android Q+, so we cannot
+        // intercept it at the VpnService layer. The only honest defence is
+        // to surface this to the UI so the user disables it.
+        if (isPrivateDnsActive()) {
+            Log.w(TAG, "Private DNS is enabled — DoT bypasses the tunnel")
+            broadcastTunError("PRIVATE_DNS_ACTIVE")
+        }
+
         disallowedApps.forEach {
             try { b.addDisallowedApplication(it) } catch (_: Throwable) {}
         }
@@ -162,6 +189,13 @@ class TrivoVpnService : VpnService() {
         }
         return b
     }
+
+    private fun isPrivateDnsActive(): Boolean = try {
+        val mode = android.provider.Settings.Global.getString(
+            contentResolver, "private_dns_mode"
+        )
+        mode != null && mode != "off"
+    } catch (_: Throwable) { false }
 
     private fun startTunnel() {
         try { fd?.close() } catch (_: Throwable) {}
