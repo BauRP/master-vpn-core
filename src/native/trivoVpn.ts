@@ -152,6 +152,9 @@ export interface TrivoVpnPlugin {
     event: "tunnelError",
     cb: (e: { code: string }) => void,
   ): Promise<PluginListenerHandle>;
+}
+
+
 
 
 /** Hardened defaults: Cloudflare + Google DoH-compatible resolvers that
