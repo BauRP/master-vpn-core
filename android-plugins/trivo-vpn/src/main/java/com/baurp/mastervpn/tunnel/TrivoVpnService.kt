@@ -492,7 +492,10 @@ class TrivoVpnService : VpnService() {
         coreProcess = null
     }
 
+    @Volatile private var lastHealth: String = "down"
+
     private fun broadcastHealth(state: String) {
+        lastHealth = state
         val i = Intent(BROADCAST_HEALTH).apply {
             setPackage(packageName)
             putExtra("state", state)
@@ -507,6 +510,20 @@ class TrivoVpnService : VpnService() {
         }
         sendBroadcast(i)
     }
+
+    /**
+     * Surface a hard tunnel error to the plugin layer, which forwards it to
+     * JS as a `tunnelError` event. The JS engine treats any error as a hard
+     * "down" transition regardless of what health says.
+     */
+    private fun broadcastTunError(code: String) {
+        val i = Intent(BROADCAST_TUN_ERROR).apply {
+            setPackage(packageName)
+            putExtra("code", code)
+        }
+        sendBroadcast(i)
+    }
+
 
     override fun onDestroy() {
         scope.cancel()
