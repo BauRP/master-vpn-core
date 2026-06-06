@@ -370,3 +370,13 @@ export function useEngineHealth(): EngineHealth {
     () => vpnEngine.getHealth(),
   );
 }
+
+/** Live last tunnel error from the native VpnService, or `null`. */
+export function useTunnelError(): string | null {
+  return useSyncExternalStore(
+    (cb) => vpnEngine.subscribeTunnelError(cb),
+    () => vpnEngine.getLastTunnelError(),
+    () => vpnEngine.getLastTunnelError(),
+  );
+}
+
