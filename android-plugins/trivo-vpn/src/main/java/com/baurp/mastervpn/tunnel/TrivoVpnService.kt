@@ -202,12 +202,26 @@ class TrivoVpnService : VpnService() {
         // Seed currentPort from the selected server config on first start
         // so we broadcast the truthful initial port (not just "443").
         serverConfig?.optInt("port", 0)?.takeIf { it > 0 }?.let { currentPort = it }
-        fd = buildBuilder().establish()
+        fd = try {
+            buildBuilder().establish()
+        } catch (t: Throwable) {
+            Log.e(TAG, "VpnService.establish() threw", t)
+            null
+        }
+        if (fd == null) {
+            // The OS refused to grant the tun fd (missing consent, conflicting
+            // VPN, OEM restriction). Without it nothing else can succeed.
+            Log.e(TAG, "tun fd unavailable — tunnel cannot start")
+            broadcastTunError("TUN_BIND_FAILED")
+            broadcastHealth("down")
+            return
+        }
         engineJob?.cancel()
         engineJob = scope.launch { runEngineLoop() }
         broadcastPort(currentPort)
         startPortRotatorIfNeeded()
     }
+
 
     private fun restartTunnel() = startTunnel()
 
