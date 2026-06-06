@@ -77,7 +77,9 @@ class TrivoVpnPlugin : Plugin() {
         val filter = IntentFilter().apply {
             addAction(TrivoVpnService.BROADCAST_HEALTH)
             addAction(TrivoVpnService.BROADCAST_PORT)
+            addAction(TrivoVpnService.BROADCAST_TUN_ERROR)
         }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(tunnelReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
