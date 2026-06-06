@@ -384,20 +384,30 @@ class TrivoVpnService : VpnService() {
      *    reconnect. On clean stop the loop exits silently.
      */
     private suspend fun runEngineLoop() = withContext(Dispatchers.IO) {
-        broadcastHealth("connected")
+        // Start in "degraded" until the core proves it actually bound to
+        // the tun fd. We refuse to claim "connected" purely because the
+        // service started — that was the desync that made the UI show
+        // ENGINE-CONNECTED while traffic still leaked.
+        broadcastHealth("degraded")
         while (isActive) {
             val config = try { generateConfigFile() } catch (t: Throwable) {
-                Log.e(TAG, "config gen failed", t); break
+                Log.e(TAG, "config gen failed", t)
+                broadcastTunError("CONFIG_GEN_FAILED:${t.message}")
+                break
             }
             val bin = coreBinary()
             if (!bin.exists()) {
                 Log.w(TAG, "core binary missing at ${bin.absolutePath} — Kill Switch holding traffic")
+                broadcastTunError("CORE_BINARY_MISSING")
                 broadcastHealth("down")
                 if (!killSwitch) break
                 delay(backoffDelay()); continue
             }
             val tunFd = fd?.fd ?: run {
-                Log.e(TAG, "tun fd unavailable"); break
+                Log.e(TAG, "tun fd unavailable")
+                broadcastTunError("TUN_FD_LOST")
+                broadcastHealth("down")
+                break
             }
             val pb = ProcessBuilder(
                 bin.absolutePath,
@@ -406,21 +416,59 @@ class TrivoVpnService : VpnService() {
             ).redirectErrorStream(true)
 
             val proc = try { pb.start() } catch (t: Throwable) {
-                Log.e(TAG, "core exec failed", t); broadcastHealth("down")
+                Log.e(TAG, "core exec failed", t)
+                broadcastTunError("CORE_EXEC_FAILED:${t.message}")
+                broadcastHealth("down")
                 if (!killSwitch) break
                 delay(backoffDelay()); continue
             }
             coreProcess = proc
 
-            // Pipe stdout/stderr to logcat on a side coroutine so the loop
-            // can await exit without buffering deadlocks.
-            launch {
+            // Watch stdout for the readiness marker. The core MUST print a
+            // single line `ready tunfd=<N>` once it has successfully dup'd
+            // the tun fd and started forwarding. Until we see that marker
+            // the engine stays "degraded". If a known bind-error string
+            // appears we propagate it to JS as a hard tunnel error.
+            val readyJob = launch {
                 proc.inputStream.bufferedReader().useLines { lines ->
-                    lines.forEach { Log.d(TAG_CORE, it) }
+                    var bound = false
+                    for (line in lines) {
+                        Log.d(TAG_CORE, line)
+                        if (!bound && (line.contains("ready tunfd=") ||
+                                       line.contains("tunnel bound") ||
+                                       line.startsWith("READY"))) {
+                            bound = true
+                            backoffAttempt = 0
+                            broadcastHealth("connected")
+                        }
+                        if (line.contains("bind: permission denied") ||
+                            line.contains("tun: invalid fd") ||
+                            line.contains("EBADF") ||
+                            line.contains("operation not permitted")) {
+                            broadcastTunError("CORE_TUN_BIND_FAILED:$line")
+                            broadcastHealth("down")
+                        }
+                    }
+                }
+            }
+
+            // Independent watchdog — if the core never reports readiness
+            // within READY_TIMEOUT_MS, kill it and let the outer loop
+            // perform an exponential-backoff reconnect. Prevents the
+            // "service alive but tunnel silently broken" desync.
+            val watchdog = launch {
+                delay(READY_TIMEOUT_MS)
+                if (isActive && proc.isAlive && lastHealth != "connected") {
+                    Log.e(TAG, "core readiness timeout — killing and retrying")
+                    broadcastTunError("CORE_READY_TIMEOUT")
+                    broadcastHealth("down")
+                    try { proc.destroy() } catch (_: Throwable) {}
                 }
             }
 
             val exit = try { proc.waitFor() } catch (_: InterruptedException) { -1 }
+            watchdog.cancel()
+            readyJob.cancel()
             coreProcess = null
             if (!isActive) break
             Log.w(TAG, "core exited code=$exit — Kill Switch active, scheduling reconnect")
@@ -428,9 +476,10 @@ class TrivoVpnService : VpnService() {
             if (!killSwitch) break
             backoffAttempt += 1
             delay(backoffDelay())
-            broadcastHealth("connected")
+            broadcastHealth("degraded")
         }
     }
+
 
     private fun backoffDelay(): Long {
         val base = 800L
