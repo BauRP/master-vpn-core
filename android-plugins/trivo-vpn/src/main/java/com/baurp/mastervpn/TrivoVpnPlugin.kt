@@ -54,9 +54,16 @@ class TrivoVpnPlugin : Plugin() {
                     if (port <= 0) payload.put("port", JSObject.NULL) else payload.put("port", port)
                     notifyListeners("portChange", payload)
                 }
+                TrivoVpnService.BROADCAST_TUN_ERROR -> {
+                    val code = intent.getStringExtra("code") ?: "UNKNOWN"
+                    notifyListeners("tunnelError", JSObject().put("code", code))
+                    // An error always implies the tunnel is no longer trusted.
+                    notifyListeners("healthChange", JSObject().put("state", "down"))
+                }
             }
         }
     }
+
 
     override fun load() {
         super.load()
