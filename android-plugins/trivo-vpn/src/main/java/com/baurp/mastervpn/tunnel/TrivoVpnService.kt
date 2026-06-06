@@ -536,6 +536,13 @@ class TrivoVpnService : VpnService() {
         private const val TAG_CORE = "TrivoCore"
         const val BROADCAST_HEALTH = "com.baurp.mastervpn.HEALTH"
         const val BROADCAST_PORT = "com.baurp.mastervpn.PORT"
+        const val BROADCAST_TUN_ERROR = "com.baurp.mastervpn.TUN_ERROR"
+
+        /** Max time the core has to print its readiness marker before we
+         *  consider the tun binding broken and force a reconnect. */
+        private const val READY_TIMEOUT_MS = 8_000L
+
+
 
         // Elite-mode DPI port-cycling pool. Mirrors the front-end list and
         // is consumed exclusively by the native rotator coroutine — the JS
