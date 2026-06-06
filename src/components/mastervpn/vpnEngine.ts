@@ -89,8 +89,19 @@ export type VpnEngine = {
   subscribe: (handlers: VpnEngineHandlers) => () => void;
   /** Subscribe to health state changes. Returns an unsubscribe fn. */
   subscribeHealth: (cb: (h: EngineHealth) => void) => () => void;
+  /** Subscribe to tunnel error codes from the native VpnService. `null`
+   *  is emitted when the engine recovers and the error is cleared. */
+  subscribeTunnelError: (cb: (code: string | null) => void) => () => void;
+  /** Last hard tunnel-layer error reported by native (or `null`). */
+  getLastTunnelError: () => string | null;
+  /** Force health to a specific state, bypassing the probe debounce.
+   *  Used by the native bridge to mirror authoritative VpnService events. */
+  forceHealth: (next: EngineHealth) => void;
+  /** Surface a hard tunnel error from native and immediately flip to "down". */
+  reportTunnelError: (code: string) => void;
   /** Read current health synchronously (for SSR / first paint). */
   getHealth: () => EngineHealth;
+
   /** Start the health-check loop. Called by VpnContext on mount. */
   start: () => void;
   /** Stop the health-check loop. Called by VpnContext on unmount. */
