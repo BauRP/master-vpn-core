@@ -332,17 +332,20 @@ void (async () => {
       void TrivoVpn.setStealthMode({ mode });
     };
 
-    // Health events from the native engine drive disconnect/reconnect.
+    // Health events from the native engine are authoritative — the
+    // VpnService knows the real state of the tun fd and core process.
+    // Mirror them directly into the engine, bypassing the probe debounce.
     await TrivoVpn.addListener("healthChange", ({ state }) => {
-      // Replay the event into the existing health state machine by
-      // synthesising a probe outcome — keeps debounce semantics intact.
-      // Drop = forced disconnect; connected = forced recover.
-      if (state === "down") {
-        // Force the engine into "down" immediately on hard tunnel drop.
-        // Mirror the internal transition: emit onDisconnect once.
-        vpnEngine.simulateNetworkChange("offline");
-      }
+      vpnEngine.forceHealth(state);
     });
+
+    // Hard tunnel errors (TUN_BIND_FAILED, CORE_READY_TIMEOUT,
+    // PRIVATE_DNS_ACTIVE, …) propagate as a sticky error + forced "down".
+    await TrivoVpn.addListener("tunnelError", ({ code }) => {
+      console.warn("[vpnEngine] native tunnel error:", code);
+      vpnEngine.reportTunnelError(code);
+    });
+
 
     // Network classification flows straight through to subscribers.
     await TrivoVpn.addListener("networkChange", ({ trust }) => {
